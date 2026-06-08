@@ -10,6 +10,7 @@ import { config } from '../../lib/config';
 export const prerender = false;
 
 const KEY = 'redeploy_test';
+const VERSION = 'v2'; // bumped to force a new deploy; confirms we're reading from Deploy B
 
 export const GET: APIRoute = async ({ url }) => {
   const token = url.searchParams.get('token');
@@ -23,7 +24,7 @@ export const GET: APIRoute = async ({ url }) => {
   }
 
   const stored = await store.getSystem<{ value: string; written_at: string }>(KEY);
-  return new Response(JSON.stringify({ key: KEY, stored }, null, 2), {
+  return new Response(JSON.stringify({ version: VERSION, key: KEY, stored }, null, 2), {
     status: 200,
     headers: { 'content-type': 'application/json' },
   });
