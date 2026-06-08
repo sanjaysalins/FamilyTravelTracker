@@ -90,6 +90,15 @@ const kv = (name: string): KV => (useBlobs() ? blobKV(name) : localKV(name));
 const registrations = () => kv('registrations');
 const vehicles = () => kv('vehicle_bookings');
 const system = () => kv('system');
+const snapshots = () => kv('snapshots');
+
+/** A point-in-time copy of all family data (registrations + bookings). */
+export interface Snapshot {
+  name: string;
+  created_at: string;
+  counts: { registrations: number; vehicle_bookings: number };
+  data: { registrations: Registration[]; vehicle_bookings: VehicleBooking[] };
+}
 
 export const store = {
   // registrations
@@ -123,5 +132,63 @@ export const store = {
       vehicle_bookings: await this.listBookings(),
       exported_for: 'family-travel-coordinator',
     };
+  },
+
+  // --- snapshot / restore / reset (data safety + UAT) ---
+
+  /** Delete every registration and vehicle booking. Does NOT touch snapshots or system keys. */
+  async wipeAll(): Promise<void> {
+    const regKeys = await registrations().list();
+    const vehKeys = await vehicles().list();
+    await Promise.all([
+      ...regKeys.map((k) => registrations().delete(k)),
+      ...vehKeys.map((k) => vehicles().delete(k)),
+    ]);
+  },
+
+  /** Replace all live data with the given dump (wipe, then write). */
+  async importAll(dump: { registrations?: Registration[]; vehicle_bookings?: VehicleBooking[] }): Promise<void> {
+    await this.wipeAll();
+    await Promise.all([
+      ...(dump.registrations ?? []).map((r) => this.putRegistration(r)),
+      ...(dump.vehicle_bookings ?? []).map((b) => this.putBooking(b)),
+    ]);
+  },
+
+  /** Save a named, point-in-time copy of all family data. Overwrites a snapshot of the same name. */
+  async snapshot(name: string, now: string): Promise<Snapshot> {
+    const data = {
+      registrations: await this.listRegistrations(),
+      vehicle_bookings: await this.listBookings(),
+    };
+    const snap: Snapshot = {
+      name,
+      created_at: now,
+      counts: { registrations: data.registrations.length, vehicle_bookings: data.vehicle_bookings.length },
+      data,
+    };
+    await snapshots().set(name, snap);
+    return snap;
+  },
+
+  getSnapshot: (name: string) => snapshots().get<Snapshot>(name),
+
+  /** List snapshot metadata (name/created_at/counts), without the heavy data payloads. */
+  async listSnapshots(): Promise<Array<Omit<Snapshot, 'data'>>> {
+    const keys = await snapshots().list();
+    const snaps = await Promise.all(keys.map((k) => snapshots().get<Snapshot>(k)));
+    return snaps
+      .filter((s): s is Snapshot => s !== null)
+      .map(({ name, created_at, counts }) => ({ name, created_at, counts }));
+  },
+
+  deleteSnapshot: (name: string) => snapshots().delete(name),
+
+  /** Roll live data back to a saved snapshot. Throws if the snapshot is missing. */
+  async restoreSnapshot(name: string): Promise<Snapshot['counts']> {
+    const snap = await snapshots().get<Snapshot>(name);
+    if (!snap) throw new Error(`Snapshot not found: ${name}`);
+    await this.importAll(snap.data);
+    return snap.counts;
   },
 };
