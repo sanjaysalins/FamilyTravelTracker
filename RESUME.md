@@ -1,6 +1,11 @@
 # RESUME — Family Travel Coordinator
 
-**Last worked:** 2026-06-08. Paused cleanly. Pick up from "Next step" below.
+**Last worked:** 2026-06-08. **LIVE on Netlify** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
+Phase 0.5 mostly done. Pick up from "Next step" below.
+
+**Live admin token (temporary):** the `/api/admin/data` endpoint is guarded by `SESSION_SECRET`
+(value in local `.env` + Netlify env — never commit it). Admin login password is stored in `.env`
+locally (gitignored), not here.
 
 For the **why** behind decisions, read `PRD.md`. For the **build order**, read `DEVELOPMENT_PLAN.md`.
 
@@ -33,7 +38,16 @@ drivers, and confirms by email. Guests don't pay — **no cost is ever shown to 
 | — `src/layouts/Base.astro`, `src/pages/index.astro`, `src/styles/global.css` (theme) | ✅ |
 | — `npm run gen-hash` helper (bcrypt) | ✅ |
 | `node_modules` installed (865 pkgs) | ✅ |
-| `.env` (local dummy secrets, gitignored) | ✅ |
+| `.env` (local **real** secrets, gitignored) | ✅ |
+| **GitHub repo** `sanjaysalins/FamilyTravelTracker` (SSH) → Netlify auto-deploy | ✅ |
+| **Phase 0.5:** deployed + live (HTTP 200) | ✅ https://bidarplan.netlify.app |
+| — blob-survival proven (wrote a blob, redeployed, it survived) | ✅ |
+| — `APP_BASE_URL` set in Netlify | ⬜ (user to add) |
+| — one real test email via Resend | ⬜ (needs Resend signup) |
+| **Integration tests** (vitest): 25 passing — `npm test` | ✅ store + config + seed/snapshot |
+| **Snapshot/restore/reset + fake-family seed** (data safety + UAT) | ✅ built + live |
+| — `src/lib/seed.ts`, `store.ts` snapshot fns, `src/pages/api/admin/data.ts` | ✅ |
+| — `astro.config.mjs` loads `.env`→`process.env` for local dev | ✅ |
 
 ## Run it now
 
@@ -48,23 +62,29 @@ python -m http.server 5000 --bind 0.0.0.0 --directory prototype   # http://local
 
 ---
 
-## NEXT STEP (do this first when you return): Phase 0.5 — de-risk on Netlify
+## NEXT STEP (do this first when you return): finish Phase 0.5
 
-This needs **your** free Netlify login (only you can do it). It proves the two scary things early:
-**does data survive a redeploy, and does email arrive.**
+Deploy uses **GitHub → Netlify CI/CD** (push to `main` = auto-deploy). The Netlify CLI route was
+dropped. Two small things remain, both needing the user:
 
-1. Create a free Netlify account at https://app.netlify.com (no card).
-2. In the prompt, log in the CLI (interactive):
-   ```
-   ! npx netlify login
-   ```
-3. Then tell me "logged in" and I will:
-   - `netlify init` / link the site, set env vars (real `ADMIN_PASSWORD_HASH` via `npm run gen-hash`,
-     `SESSION_SECRET`, Resend key),
-   - deploy, write a test blob, **redeploy, confirm it survived**,
-   - verify a sender + send **one real test email**.
+1. **Add `APP_BASE_URL`** in Netlify → Site settings → Environment variables →
+   `APP_BASE_URL = https://bidarplan.netlify.app` (so emailed edit-links point at the real site).
+   Then trigger a redeploy.
+2. **Email test:** sign up at https://resend.com (free), verify a sender, set `RESEND_API_KEY`
+   + `EMAIL_FROM` + `TEST_EMAIL_RECIPIENT` in Netlify. Then we add a tiny send-test endpoint and
+   confirm one real email arrives.
 
-If email/DNS is slow, that's fine — it's exactly why we test it first.
+Already proven this session: deploy works, **a blob survives a redeploy**, and the
+snapshot/restore/seed data tools work (locally + read-verified live).
+
+### UAT / data-safety tools (built this session)
+`/api/admin/data` (token = `SESSION_SECRET`, header `x-admin-token`) — TEMPORARY until the Phase 5
+admin UI wraps it behind real login. Actions: `export`, `list-snapshots` (GET); `snapshot`,
+`restore`, `seed`, `reset`, `import`, `delete-snapshot` (POST; destructive ones need
+`{"confirm":true}` and auto-save a one-step `_autosave` first). Fake families: `src/lib/seed.ts`.
+Workflow: **snapshot → test → restore** (same-site, since there's no separate test env). NOTE: a
+guardrail blocks running destructive actions against the **live** site without the user's OK; local
+`npm run dev` (file store under `.data/`) is the safe place to seed/reset freely.
 
 ## Then, in order (DEVELOPMENT_PLAN.md)
 
