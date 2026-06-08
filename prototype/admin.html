@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · What needs you</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="kicker">Sybil's 60th · Organiser</div>
+    <h1>What needs you</h1>
+    <p>One thing at a time. Tap a job to work through it.</p>
+  </div>
+
+  <div id="tasks" class="tasklist"></div>
+
+  <div class="card">
+    <a class="btn btn-ghost" href="admin-list.html">📁 All registrations</a>
+    <a class="btn btn-ghost" href="admin-reports.html" style="margin-top:10px">📋 Reports &amp; driver plan</a>
+    <a class="btn btn-ghost" href="index.html" style="margin-top:10px">Log out</a>
+  </div>
+
+  <p class="center"><button class="btn small btn-ghost" onclick="if(confirm('Reset demo data?')){resetDemo();location.reload();}">↺ Reset demo</button></p>
+</div>
+
+<button class="fab admin" onclick="alert('Prototype: WhatsApp a family')">💬</button>
+
+<script src="data.js"></script>
+<script>
+const T=adminTasks();
+const order=['review','book','driver','confirm','chase'];
+const icon={review:'📝',book:'🚐',driver:'🧑‍✈️',confirm:'✉️',chase:'🔎'};
+document.getElementById('tasks').innerHTML = order.map(k=>{
+  const t=T[k], zero=t.n===0;
+  return `<a class="task ${zero?'zero':''}" href="${zero?'#':t.href}" ${zero?'onclick="return false"':''}>
+    <span class="badge">${zero?'✓':t.n}</span>
+    <span><span class="tt">${icon[k]} ${t.title}</span><br><span class="ts">${zero?'All done 🎉':t.sub}</span></span>
+    <span class="arrow">${zero?'':'›'}</span>
+  </a>`;
+}).join('');
+</script>
+</body>
+</html>

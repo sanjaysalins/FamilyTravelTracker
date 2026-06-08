@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.netlify/
+
+# local Blobs fallback store (dev only)
+.data/
+
+# env + secrets
+.env
+.env.*
+!.env.example
+
+# misc
+*.log
+bash.exe.stackdump
+.DS_Store
+
+# prototype + working docs stay in the repo, but the panel run output does not need committing
+ai-panel-run/

@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Register travel details</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="progress">
+    <div class="steplabel"><span id="stepname">About you</span><span id="stepnum">Step 1 of 5</span></div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+  </div>
+
+  <!-- STEP 1 -->
+  <section class="step" data-step="1" data-name="About you">
+    <div class="card">
+      <h2>About you</h2>
+      <p class="muted small">The main person we should contact for this family group.</p>
+
+      <div class="btn-row">
+        <div style="flex:1"><label class="fl">First name <span class="req">*</span></label><input type="text" value="Rashid"></div>
+        <div style="flex:1"><label class="fl">Surname <span class="req">*</span></label><input type="text" value="Khan"></div>
+      </div>
+
+      <label class="fl">Email address <span class="req">*</span></label>
+      <input type="email" value="rashid.khan@example.com">
+      <p class="hint">We'll email your details and a private link to edit them.</p>
+
+      <label class="fl">Mobile number <span class="req">*</span></label>
+      <div class="phone">
+        <select><option>🇮🇳 +91</option><option>🇬🇧 +44</option><option>🇺🇸 +1</option></select>
+        <input type="tel" value="98765 43210">
+      </div>
+      <p class="hint">Example: +91 98765 43210</p>
+
+      <label class="choice sel" style="margin-top:14px"><input type="checkbox" id="waSame" checked onchange="toggleWa()"> <span>I use WhatsApp on this same number</span></label>
+
+      <div id="waBlock" class="hide">
+        <label class="fl">WhatsApp number <span class="req">*</span></label>
+        <div class="phone">
+          <select><option>🇮🇳 +91</option><option>🇬🇧 +44</option><option>🇺🇸 +1</option></select>
+          <input type="tel" placeholder="WhatsApp number">
+        </div>
+        <p class="hint">We'll send your travel updates here. Enter the number that has WhatsApp.</p>
+      </div>
+
+      <div class="btn-row" style="margin-top:6px">
+        <div style="flex:1"><label class="fl">Home city</label><input type="text" value="Hyderabad"></div>
+        <div style="flex:1"><label class="fl">Home country <span class="req">*</span></label><input type="text" value="India"></div>
+      </div>
+
+      <label class="choice sel" style="margin-top:16px; align-items:flex-start">
+        <input type="checkbox" checked>
+        <span><b>I agree to share these details</b><br>
+        <span class="muted small">We use them only to arrange your travel, pickups, food and stay for Sybil's celebration. Only the organiser can see them. <a href="privacy.html">Privacy note</a>.</span></span>
+      </label>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step hide" data-step="2" data-name="Who's coming">
+    <div class="card">
+      <h2>Who's coming</h2>
+      <p class="muted small">Add everyone in your group, including yourself.</p>
+
+      <label class="fl">How many people are coming? <span class="req">*</span></label>
+      <div class="countbox">
+        <select id="count" onchange="setCount(this.value)">
+          <option>1</option><option>2</option><option>3</option><option selected>4</option>
+          <option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+        </select>
+        <span class="bigcount" id="countlabel">4 people</span>
+      </div>
+
+      <div id="people" style="margin-top:14px"></div>
+
+      <button class="btn btn-ghost" onclick="addPerson()" style="margin-top:8px">+ Add another person</button>
+      <p class="hint">Tap ✕ to remove anyone. The number above updates by itself.</p>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step hide" data-step="3" data-name="Getting there & going home">
+    <div class="card">
+      <h2>Getting there</h2>
+      <div class="btn-row">
+        <div style="flex:1"><label class="fl">From</label><input type="text" value="Hyderabad Airport"></div>
+        <div style="flex:1"><label class="fl">To</label><input type="text" value="Bidar"></div>
+      </div>
+      <label class="fl">Arrival date</label>
+      <input type="date" value="2026-10-16">
+      <label class="choice" style="margin-top:8px"><input type="checkbox"> <span>Not booked yet</span></label>
+
+      <div class="btn-row" style="margin-top:6px">
+        <div style="flex:1"><label class="fl">Arrival time</label><input type="time" value="10:30"></div>
+        <div style="flex:1"><label class="fl">Mode</label>
+          <select><option>Flight</option><option>Train</option><option>Bus</option><option>Car</option><option>Not sure</option></select></div>
+      </div>
+      <label class="fl">Flight / train number (optional)</label>
+      <input type="text" value="6E 7123">
+
+      <label class="fl" style="margin-top:18px">Do you need a pickup when you arrive? <span class="req">*</span></label>
+      <div class="choices">
+        <label class="choice sel"><input type="radio" name="pk" checked> <b>Yes, please arrange a pickup</b></label>
+        <label class="choice"><input type="radio" name="pk"> <b>No, we'll arrange our own</b></label>
+        <label class="choice"><input type="radio" name="pk"> <b>Not sure yet</b></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Going home</h2>
+      <div class="btn-row">
+        <div style="flex:1"><label class="fl">From</label><input type="text" value="Bidar"></div>
+        <div style="flex:1"><label class="fl">To</label><input type="text" value="Hyderabad Airport"></div>
+      </div>
+      <label class="fl">Departure date</label>
+      <input type="date" value="2026-10-19">
+
+      <label class="fl">Return flight / train number (optional)</label>
+      <input type="text" value="EK 525">
+
+      <label class="fl">What time does your flight / train leave Hyderabad? <span class="req">*</span></label>
+      <input type="time" value="11:40">
+      <div class="banner warn" style="margin-top:8px">🕒 Bidar to Hyderabad takes about <b>3 hours</b>. We'll plan your car to leave early enough — counting back from this time plus check-in.</div>
+      <label class="choice" style="margin-top:4px"><input type="checkbox"> <span>Not booked yet</span></label>
+
+      <label class="fl">Preferred time to leave Bidar (optional)</label>
+      <input type="time" value="">
+      <p class="hint">Leave this blank and we'll suggest a time from your flight. Fill it in only if you'd rather leave at a set time.</p>
+
+      <label class="fl" style="margin-top:14px">Do you need a drop-off? <span class="req">*</span></label>
+      <div class="choices">
+        <label class="choice sel"><input type="radio" name="dp" checked> <b>Yes, please arrange a drop-off</b></label>
+        <label class="choice"><input type="radio" name="dp"> <b>No, we'll arrange our own</b></label>
+        <label class="choice"><input type="radio" name="dp"> <b>Not sure yet</b></label>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step hide" data-step="4" data-name="Travel between towns">
+    <div class="card">
+      <h2>Travel between towns</h2>
+      <p class="muted small">Any trips between towns during your stay? This is optional.</p>
+
+      <div class="legcard">
+        <div class="lh"><b>Trip 1</b> <button class="btn small btn-ghost">Remove</button></div>
+        <div class="btn-row">
+          <div style="flex:1"><label class="fl small">From</label><input type="text" value="Bidar"></div>
+          <div style="flex:1"><label class="fl small">To</label><input type="text" value="Gulbarga"></div>
+        </div>
+        <label class="fl small">Date</label><input type="date" value="2026-10-18">
+        <label class="fl small">People</label><input type="number" value="2" style="max-width:120px">
+        <label class="choice sel" style="margin-top:10px"><input type="radio" name="t1" checked> <b>Need transport</b></label>
+        <label class="choice" style="margin-top:6px"><input type="radio" name="t1"> <b>We'll arrange our own</b></label>
+      </div>
+
+      <button class="btn btn-ghost">+ Add another trip</button>
+      <p class="hint">You can add up to 2 here. The organiser can add more if needed.</p>
+    </div>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="step hide" data-step="5" data-name="Review & submit">
+    <div class="card">
+      <h2>Anything we should know?</h2>
+      <label class="fl">Special requirements (optional)</label>
+      <textarea>Nani uses a walking stick — step-free pickup if possible. One child (age 9). No nuts please.</textarea>
+      <p class="hint">Mobility, elderly help, a baby/child seat, or diet. Please don't enter medical details.</p>
+    </div>
+
+    <div class="card">
+      <h2>Please check your details</h2>
+
+      <div class="sum">
+        <div class="top"><h3>About you</h3><button class="btn small btn-ghost" onclick="go(1)">Edit</button></div>
+        <dl><dt>Name</dt><dd>Rashid Khan</dd><dt>Email</dt><dd>rashid.khan@example.com</dd>
+        <dt>Phone</dt><dd>+91 98765 43210</dd><dt>From</dt><dd>Hyderabad, India</dd></dl>
+      </div>
+
+      <div class="sum">
+        <div class="top"><h3>Who's coming</h3><button class="btn small btn-ghost" onclick="go(2)">Edit</button></div>
+        <dl><dt>Group</dt><dd id="sum-people">4 people</dd></dl>
+      </div>
+
+      <div class="sum">
+        <div class="top"><h3>Getting there</h3><button class="btn small btn-ghost" onclick="go(3)">Edit</button></div>
+        <dl><dt>Arrive</dt><dd>16 Oct 2026, 10:30 IST · Flight 6E 7123</dd>
+        <dt>Route</dt><dd>Hyderabad Airport → Bidar</dd>
+        <dt>Pickup</dt><dd><span class="chip req">Pickup needed · 4 people</span></dd></dl>
+      </div>
+
+      <div class="sum">
+        <div class="top"><h3>Going home</h3><button class="btn small btn-ghost" onclick="go(3)">Edit</button></div>
+        <dl><dt>Depart</dt><dd>19 Oct 2026</dd>
+        <dt>Flight out</dt><dd>11:40 IST · EK 525</dd>
+        <dt>Leave Bidar</dt><dd>~06:00 IST <span class="muted small">(suggested — 3 hr drive + check-in)</span></dd>
+        <dt>Route</dt><dd>Bidar → Hyderabad Airport</dd>
+        <dt>Drop-off</dt><dd><span class="chip req">Drop-off needed</span></dd></dl>
+      </div>
+
+      <div class="sum">
+        <div class="top"><h3>Between towns</h3><button class="btn small btn-ghost" onclick="go(4)">Edit</button></div>
+        <dl><dt>Trip 1</dt><dd>18 Oct · Bidar → Gulbarga · 2 people · transport needed</dd></dl>
+      </div>
+
+      <label class="choice sel" style="margin-top:6px"><input type="checkbox" checked> <span>These details are correct as far as I know. I can update them later.</span></label>
+    </div>
+  </section>
+
+</div>
+
+<div class="sticky">
+  <div class="inner">
+    <button class="btn btn-ghost" id="back" onclick="prev()">← Back</button>
+    <button class="btn btn-primary" id="next" onclick="next()">Save &amp; Continue →</button>
+  </div>
+</div>
+
+<button class="fab" onclick="alert('Prototype: would open WhatsApp chat with the organiser')">💬 Need help?</button>
+
+<script>
+/* ---- Who's coming: fool-proof dynamic people list ---- */
+const AGES=['Adult','Child','Elderly'];
+let people=[
+  {name:'Rashid Khan', age:'Adult'},
+  {name:'Ayesha Khan', age:'Adult'},
+  {name:'Imran', age:'Child'},
+  {name:'Nani', age:'Elderly'},
+];
+function renderPeople(){
+  const box=document.getElementById('people'); box.innerHTML='';
+  people.forEach((p,i)=>{
+    const row=document.createElement('div'); row.className='person';
+    row.innerHTML=
+      '<input class="pname" placeholder="Person '+(i+1)+' name" value="'+p.name.replace(/"/g,'&quot;')+'">'+
+      '<select class="page">'+AGES.map(a=>'<option '+(a===p.age?'selected':'')+'>'+a+'</option>').join('')+'</select>'+
+      '<button class="btn btn-ghost rm" title="Remove">✕</button>';
+    row.querySelector('.pname').oninput=e=>people[i].name=e.target.value;
+    row.querySelector('.page').onchange=e=>people[i].age=e.target.value;
+    row.querySelector('.rm').onclick=()=>{ if(people.length>1){people.splice(i,1); renderPeople();} };
+    box.appendChild(row);
+  });
+  const n=people.length;
+  const sel=document.getElementById('count');
+  sel.value = n<=10 ? String(n) : '10';
+  document.getElementById('countlabel').textContent = n+(n===1?' person':' people');
+  const adults=people.filter(p=>p.age==='Adult').length;
+  const kids=people.filter(p=>p.age==='Child').length;
+  const eld=people.filter(p=>p.age==='Elderly').length;
+  let parts=[]; if(adults)parts.push(adults+' adult'+(adults>1?'s':'')); if(kids)parts.push(kids+' child'+(kids>1?'ren':'')); if(eld)parts.push(eld+' elderly');
+  document.getElementById('sum-people').textContent = n+' people ('+parts.join(', ')+')';
+}
+function addPerson(){ people.push({name:'',age:'Adult'}); renderPeople(); }
+function setCount(v){ const n=+v; while(people.length<n)people.push({name:'',age:'Adult'}); while(people.length>n)people.pop(); renderPeople(); }
+
+/* show a WhatsApp number field when it's NOT the same as mobile */
+function toggleWa(){ document.getElementById('waBlock').classList.toggle('hide', document.getElementById('waSame').checked); }
+
+/* ---- wizard navigation ---- */
+let s=1; const total=5;
+const steps=[...document.querySelectorAll('.step')];
+function render(){
+  steps.forEach(el=>el.classList.toggle('hide', +el.dataset.step!==s));
+  document.getElementById('fill').style.width=(s/total*100)+'%';
+  document.getElementById('stepnum').textContent='Step '+s+' of '+total;
+  document.getElementById('stepname').textContent=steps[s-1].dataset.name;
+  document.getElementById('back').style.visibility = s===1?'hidden':'visible';
+  document.getElementById('next').textContent = s===total ? 'Submit registration ✓' : 'Save & Continue →';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function next(){ if(s<total){s++;render();} else {window.location='success.html';} }
+function prev(){ if(s>1){s--;render();} }
+function go(n){ s=n; render(); }
+document.addEventListener('click',e=>{
+  const c=e.target.closest('.choice'); if(!c)return;
+  const inp=c.querySelector('input'); if(!inp)return;
+  if(inp.type==='radio'){ c.parentElement.querySelectorAll('.choice').forEach(x=>x.classList.remove('sel')); c.classList.add('sel'); }
+  if(inp.type==='checkbox'){ setTimeout(()=>c.classList.toggle('sel',inp.checked),0); }
+});
+renderPeople(); toggleWa(); render();
+</script>
+</body>
+</html>

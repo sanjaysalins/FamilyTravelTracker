@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirm &amp; email families</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap jobcard">
+  <div class="progress">
+    <div class="steplabel"><span>Confirm &amp; email</span><span id="prog">—</span></div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+  </div>
+  <div id="stage"></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const QUEUE = confirmableBookings().map(b=>b.id);
+let i=0;
+
+function render(){
+  const stage=document.getElementById('stage');
+  if(i>=QUEUE.length){
+    document.getElementById('fill').style.width='100%';
+    document.getElementById('prog').textContent='Done';
+    stage.innerHTML=`<div class="card center"><div style="font-size:3rem">🎉</div>
+      <h1>Families told</h1><p class="muted">${QUEUE.length} confirmation(s) sent.</p>
+      <a class="btn btn-ghost" href="admin.html">Back to What needs you</a></div>`;
+    return;
+  }
+  const b=STATE.bookings.find(x=>x.id===QUEUE[i]);
+  document.getElementById('fill').style.width=((i)/QUEUE.length*100)+'%';
+  document.getElementById('prog').textContent=`${i+1} of ${QUEUE.length}`;
+  const fam=b.covered.map(c=>esc(c.family)).join(', ');
+  const verb=b.purpose==='departure'?`Your car will leave Bidar at ${b.depart_time} IST`:`You'll be picked up at ${b.depart_time} IST`;
+  stage.innerHTML=`<div class="card">
+    <p class="ts muted" style="margin:0">${dmy(b.date)} · to the ${fam} family</p>
+    <p class="jobbig">${esc(b.route_from)} → ${esc(b.route_to)}</p>
+
+    <div class="banner ok" style="text-align:left">
+      <b>This is what they'll receive</b>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:.9rem">
+        Dear guest,<br><br>
+        Your local transport is taken care of — <b>there is nothing to pay</b>.<br><br>
+        ${esc(b.route_from)} → ${esc(b.route_to)} · ${dmy(b.date)}<br>
+        ${verb}.<br>
+        Driver: ${esc(b.driver_name)} · ${esc(b.driver_phone)}<br>
+        Vehicle: ${vlabel(b.vehicle_type)}${b.vehicle_reg?(' · '+esc(b.vehicle_reg)):''}<br><br>
+        If your plans change, just use your edit link.<br>
+        Warm wishes — The organisers
+      </div>
+      <p class="hint" style="margin-top:8px">🔒 No cost, operator or budget is included.</p>
+    </div>
+  </div>
+  <div class="sticky"><div class="inner">
+    <button class="btn btn-ghost" onclick="skip()">Skip</button>
+    <button class="btn btn-primary" onclick="sendNext()">Send &amp; next →</button>
+  </div></div>`;
+}
+function sendNext(){
+  const b=STATE.bookings.find(x=>x.id===QUEUE[i]);
+  updateBooking(b.id,{status:'completed'});
+  b.covered.forEach(c=>{ const l=legById(c.leg_id); if(l) l.confirmed=true; });
+  save();
+  i++; render();
+}
+function skip(){ i++; render(); }
+
+if(!QUEUE.length){
+  document.getElementById('stage').innerHTML=`<div class="card center"><div style="font-size:3rem">✅</div>
+    <h1>Nothing to confirm yet</h1><p class="muted">Assign drivers to bookings first, then come back.</p>
+    <a class="btn btn-primary" href="admin-assign.html">Assign drivers</a>
+    <a class="btn btn-ghost" href="admin.html" style="margin-top:10px">Back to What needs you</a></div>`;
+  document.getElementById('prog').textContent='0 of 0';
+} else render();
+</script>
+</body>
+</html>

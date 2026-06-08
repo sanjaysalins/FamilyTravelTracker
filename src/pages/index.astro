@@ -1,0 +1,29 @@
+---
+import Base from '../layouts/Base.astro';
+import { config } from '../lib/config';
+
+const { birthdayName, birthdayAge, town, start, end } = config.event;
+const fmt = (iso: string) => {
+  const [y, m, d] = iso.split('-');
+  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m - 1];
+  return `${+d} ${mon} ${y}`;
+};
+const dates = `${fmt(start)} – ${fmt(end)}`;
+---
+<Base title={`${birthdayName}'s ${birthdayAge}th — Family Travel`}>
+  <div class="hero">
+    <div class="kicker">{birthdayName}'s {birthdayAge}th Birthday</div>
+    <h1>Family Travel Registration</h1>
+    <p>{town} · {dates}</p>
+  </div>
+
+  <div class="card">
+    <p>Please share your travel plans so we can help with pickups, drop-offs and local transport during the celebration.</p>
+    <p class="muted small">Takes about 5 minutes. You can change your details later. It's fine if some details aren't final yet.</p>
+    <a class="btn btn-primary" href="/register" style="margin-top:8px">Register travel details</a>
+    <a class="btn btn-ghost" href="/find" style="margin-top:10px">Edit my registration</a>
+    <a class="btn btn-ghost" href="/find" style="margin-top:10px">Find my registration</a>
+  </div>
+
+  <p class="center muted small"><a href="/admin">Organiser? Open the admin area →</a></p>
+</Base>

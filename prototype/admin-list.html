@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · All registrations</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap wrap-wide">
+  <div class="topbar">
+    <a class="btn small btn-ghost" href="admin.html">← What needs you</a>
+    <h1 style="margin:0; font-size:1.25rem">All registrations</h1>
+    <a class="btn small btn-gold" href="#" onclick="alert('Prototype: CSV export');return false">Export CSV</a>
+  </div>
+
+  <div id="needs"></div>
+
+  <input type="text" placeholder="Search surname, phone, reference…" style="max-width:340px; margin-bottom:10px">
+  <div id="table"></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// needs-you strip (same data as the Action Centre)
+const T=adminTasks(), bits=[];
+if(T.driver.n) bits.push(`<b>${T.driver.n}</b> need a driver`);
+if(T.confirm.n) bits.push(`<b>${T.confirm.n}</b> to confirm`);
+if(T.chase.n) bits.push(`<b>${T.chase.n}</b> to chase`);
+if(T.book.n) bits.push(`<b>${T.book.n}</b> to book`);
+document.getElementById('needs').innerHTML = bits.length
+  ? `<div class="needs">⚠ Needs you: ${bits.join(' · ')} <a class="btn small btn-primary" href="admin.html">Action Centre →</a></div>` : '';
+
+// table
+const rows=STATE.regs.map(r=>{
+  const arr=r.legs.find(l=>l.dir==='arrival');
+  const date = arr ? (arr.tbc||!arr.date ? '<span class="chip gold">Not booked</span>' : dmy(arr.date).replace(' 2026','')) : '—';
+  const need = r.legs.some(l=>l.need && !l.bookingId) ? '<span class="chip req">Needs work</span>' : '<span class="chip ok">Sorted</span>';
+  const rev = r.reviewed ? '' : '<span class="chip warn">New</span>';
+  return `<tr>
+    <td>${r.ref.replace('BDAY-2026-','')}</td>
+    <td><b>${esc(r.family)}</b><br><span class="small muted">${esc(r.contact)}</span></td>
+    <td>${r.people}</td><td>${date}</td><td>${need} ${rev}</td>
+    <td><a class="btn small btn-primary" href="admin-detail.html?ref=${r.ref}">Open</a></td>
+  </tr>`;
+}).join('');
+document.getElementById('table').innerHTML =
+  `<table class="table"><thead><tr><th>Ref</th><th>Family</th><th>People</th><th>Arrives</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+</script>
+</body>
+</html>

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · Reports &amp; driver plan</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap wrap-wide">
+  <div class="topbar">
+    <a class="btn small btn-ghost" href="admin.html">← Dashboard</a>
+    <h1 style="margin:0; font-size:1.25rem">Reports &amp; driver plan</h1>
+    <div style="display:flex; gap:8px">
+      <button class="btn small btn-ghost" onclick="if(confirm('Reset all demo data?')){resetDemo();renderAll();}">↺ Reset demo</button>
+      <button class="btn small btn-gold" onclick="alert('Prototype: download CSV (Excel-safe)')">Export CSV</button>
+    </div>
+  </div>
+
+  <div class="banner info small">This page is <b>live</b> in your browser: accept a suggestion → it becomes a booking you can edit → assign a driver → it appears on the run sheet. Changes save locally. Use <b>↺ Reset demo</b> to start over.</div>
+
+  <div class="tabs">
+    <button class="tab active" data-t="hire">🚐 Vehicles to hire</button>
+    <button class="tab" data-t="plan">📊 Pickup planner</button>
+    <button class="tab" data-t="run">📋 Driver run sheets</button>
+    <button class="tab" data-t="time">🕐 Timeline</button>
+  </div>
+
+  <section id="hire"></section>
+  <section id="plan" class="hide"></section>
+  <section id="run" class="hide"></section>
+  <section id="time" class="hide"></section>
+</div>
+
+<button class="fab admin" onclick="window.print()">🖨 Print</button>
+
+<script src="data.js"></script>
+<script>
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const STATUSES=['to_book','booked','assigned','completed','cancelled'];
+const statusChip={to_book:'req',booked:'plan',assigned:'gold',completed:'ok',cancelled:'warn',suggested:'warn'};
+let SUGG=[];
+
+/* ---------- VEHICLES TO HIRE ---------- */
+function renderHire(){
+  const bs=STATE.bookings;
+  // summary by type
+  const counts={};
+  bs.forEach(b=>counts[b.vehicle_type]=(counts[b.vehicle_type]||0)+1);
+  const sumCards = VEHICLES.filter(v=>counts[v[0]]).map(v=>
+    `<div class="kpi"><div class="n">${counts[v[0]]}</div><div class="l">${v[1]} (${v[2]})</div></div>`).join('')
+    || '<p class="muted">No vehicles booked yet. Go to <b>Pickup planner</b> and accept a suggestion.</p>';
+
+  // group bookings by date
+  const byDate={};
+  bs.forEach(b=>(byDate[b.date]=byDate[b.date]||[]).push(b));
+  let body='';
+  Object.keys(byDate).sort().forEach(d=>{
+    body+=`<h2>${dmy(d)}</h2>`;
+    byDate[d].sort((a,b)=>(a.depart_time||'').localeCompare(b.depart_time||'')).forEach(b=>body+=bookingCard(b));
+  });
+
+  document.getElementById('hire').innerHTML=`
+    <div class="card"><h2 style="margin-top:0">To hire — summary</h2>
+      <div class="kpis">${sumCards}</div>
+      <p class="muted small">Estimated total: <b id="total">₹0</b> &nbsp;·&nbsp; ${bs.length} booking(s)</p>
+    </div>
+    ${body || '<div class="single"><p class="muted">Nothing booked yet.</p></div>'}`;
+  updateTotal();
+}
+
+function bookingCard(b){
+  const carried=bookingPeople(b), over=carried>b.seats;
+  const purpose = b.purpose==='departure'?'Leave by':b.purpose==='arrival'?'Pickup':'Trip';
+  const fam=b.covered.map(c=>
+    `<tr><td>${esc(c.family)}</td><td>${c.people}</td><td>${esc(c.phone||'')}</td>
+     <td><button class="btn small btn-ghost" onclick="detach('${b.id}','${c.leg_id}')">✕ detach</button></td></tr>`).join('');
+  const vopts=VEHICLES.map(v=>`<option value="${v[0]}" ${v[0]===b.vehicle_type?'selected':''}>${v[1]}</option>`).join('');
+  const sopts=STATUSES.map(s=>`<option value="${s}" ${s===b.status?'selected':''}>${s.replace('_',' ')}</option>`).join('');
+  return `<div class="legcard">
+    <div class="lh">
+      <div><b>${esc(b.route_from)} → ${esc(b.route_to)}</b> <span class="small muted">· ${b.id}</span></div>
+      <span class="chip ${statusChip[b.status]}">${b.status.replace('_',' ')}</span>
+    </div>
+    <p class="small muted" style="margin:0 0 8px">${purpose} ${esc(b.depart_time||'—')} IST · ${dmy(b.date)}</p>
+
+    <div class="btn-row">
+      <div style="flex:1"><label class="fl small">Vehicle</label>
+        <select onchange="setVeh('${b.id}',this.value)">${vopts}</select></div>
+      <div style="flex:1"><label class="fl small">Seats</label>
+        <input type="number" value="${b.seats}" onchange="upd('${b.id}','seats',+this.value)"></div>
+    </div>
+    <div class="small ${over?'':'muted'}" style="margin:6px 0">
+      Carrying <b>${carried}</b> of ${b.seats} seats
+      ${over?'<span class="chip req">⚠ over capacity — bigger or 2nd vehicle</span>':'<span class="chip ok">fits</span>'}
+    </div>
+
+    <table class="table" style="box-shadow:none; margin:8px 0">
+      <thead><tr><th>Family</th><th>People</th><th>Phone</th><th></th></tr></thead>
+      <tbody>${fam||'<tr><td colspan=4 class="muted">No families — delete this booking.</td></tr>'}</tbody>
+    </table>
+
+    <div class="btn-row">
+      <div style="flex:2"><label class="fl small">Operator / vendor <span class="chip gold">internal</span></label>
+        <input type="text" value="${esc(b.operator_name)}" placeholder="e.g. Bidar Cabs" onchange="upd('${b.id}','operator_name',this.value)"></div>
+      <div style="flex:1"><label class="fl small">Quote ₹ <span class="chip gold">internal</span></label>
+        <input type="number" class="cost" value="${b.quote_amount??''}" placeholder="0" oninput="qInput('${b.id}',this.value)"></div>
+    </div>
+    <p class="hint">🔒 Operator &amp; quote are for your budget only — they are <b>never</b> shown to families. Local transport is hosted; guests don't pay.</p>
+    <div class="btn-row">
+      <div style="flex:1"><label class="fl small">Driver name</label>
+        <input type="text" value="${esc(b.driver_name)}" placeholder="e.g. Suresh" onchange="upd('${b.id}','driver_name',this.value)"></div>
+      <div style="flex:1"><label class="fl small">Driver phone</label>
+        <input type="tel" value="${esc(b.driver_phone)}" placeholder="+91 …" onchange="upd('${b.id}','driver_phone',this.value)"></div>
+      <div style="flex:1"><label class="fl small">Vehicle reg</label>
+        <input type="text" value="${esc(b.vehicle_reg)}" placeholder="TS09 AB 1234" onchange="upd('${b.id}','vehicle_reg',this.value)"></div>
+    </div>
+    <div class="btn-row" style="margin-top:10px; align-items:flex-end">
+      <div style="flex:1"><label class="fl small">Status</label>
+        <select onchange="upd('${b.id}','status',this.value)">${sopts}</select></div>
+      <button class="btn btn-ghost" style="flex:1" onclick="if(confirm('Delete this booking? Families go back to suggestions.')){deleteBooking('${b.id}');renderAll();}">Delete</button>
+      <button class="btn btn-primary" style="flex:1" onclick="previewEmail('${b.id}')">Preview &amp; email families</button>
+    </div>
+  </div>`;
+}
+function setVeh(id,t){ const b=STATE.bookings.find(x=>x.id===id); updateBooking(id,{vehicle_type:t, seats:vseats(t)||b.seats}); renderHire(); }
+function upd(id,f,v){ updateBooking(id,{[f]:v}); if(f==='status'||f==='seats') renderHire(); }
+function qInput(id,v){ updateBooking(id,{quote_amount:v===''?null:+v}); updateTotal(); }
+function detach(bid,legId){
+  const b=STATE.bookings.find(x=>x.id===bid);
+  b.covered=b.covered.filter(c=>c.leg_id!==legId);
+  const l=legById(legId); if(l) l.bookingId=null;
+  save(); renderAll();
+}
+function updateTotal(){
+  const t=STATE.bookings.reduce((s,b)=>s+(+b.quote_amount||0),0);
+  const el=document.getElementById('total'); if(el) el.textContent=INR(t);
+}
+/* family-facing email preview — deliberately NO cost / operator / budget */
+function previewEmail(id){
+  const b=STATE.bookings.find(x=>x.id===id);
+  const fam=b.covered.map(c=>c.family).join(', ');
+  const verb=b.purpose==='departure'
+    ? `Your car will leave Bidar at ${b.depart_time||'(time)'} IST`
+    : `You will be picked up at ${b.depart_time||'(time)'} IST`;
+  alert(
+`This is what the FAMILY sees — notice there is no cost anywhere.
+
+To: ${fam} family
+Subject: Your transport for Sybil's 60th is arranged
+
+Dear guest,
+
+Your local transport is taken care of — there is nothing to pay.
+
+  ${b.route_from} → ${b.route_to}
+  ${dmy(b.date)}
+  ${verb}.
+  Driver: ${b.driver_name||'(to be assigned)'}  ${b.driver_phone||''}
+  Vehicle: ${vlabel(b.vehicle_type)}${b.vehicle_reg?(' · '+b.vehicle_reg):''}
+
+If your plans change, just use your edit link.
+Warm wishes — The organisers
+
+(Operator and quote of ${b.quote_amount?('₹'+b.quote_amount):'—'} are kept private and are NOT in this email.)`);
+}
+
+/* ---------- PICKUP PLANNER (suggestions) ---------- */
+function renderPlan(){
+  SUGG=suggestions();
+  let html=`<div class="banner warn small">🕒 <b>Bidar ↔ Hyderabad ≈ 3 hrs.</b> For departures the "leave by" is worked back from each return flight (minus check-in minus drive). The earliest flight sets the vehicle time.</div>`;
+  if(!SUGG.length){ html+=`<div class="banner ok">🎉 Every transport leg is covered by a booking. Check the <b>Vehicles to hire</b> tab.</div>`; }
+  SUGG.forEach((s,i)=>{
+    const cls = s.legs.length>1 ? 'cluster' : 'single';
+    const win = s.dir==='departure' ? `leave Bidar by ${s.depart}` : `pickup ${s.depart}`;
+    const rows=s.legs.map(l=>{
+      const t = l.dir==='departure' ? (l.flightOut||l.leaveBy) : (l.time+(l.flight?(' · '+l.flight):''));
+      return `<tr><td>${esc(l.family)}</td><td>${l.people}</td><td>${esc(t)}</td></tr>`;
+    }).join('');
+    html+=`<div class="${cls}">
+      <div class="topbar" style="margin:0 0 8px">
+        <b>${esc(s.from)} → ${esc(s.to)} · ${dmy(s.date)}</b>
+        <span class="chip ${s.legs.length>1?'warn':'ok'}">${s.legs.length>1?s.legs.length+' overlap · '+win:win}</span>
+      </div>
+      <table class="table" style="box-shadow:none">
+        <thead><tr><th>Family</th><th>People</th><th>${s.dir==='departure'?'Flight out':'Arrives'}</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="sug">💡 <b>${s.people} people.</b> Suggest <b>1 × ${vlabel(s.vehicle_type)} (${s.seats} seats)</b>.
+        <div style="margin-top:8px"><button class="btn small btn-primary" onclick="accept(${i})">✓ Accept → create booking</button></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('plan').innerHTML=html;
+}
+function accept(i){ createBooking(SUGG[i]); renderAll(); switchTab('hire'); }
+
+/* ---------- DRIVER RUN SHEETS ---------- */
+function renderRun(){
+  const assigned=STATE.bookings.filter(b=>b.driver_name && b.status!=='cancelled');
+  if(!assigned.length){ document.getElementById('run').innerHTML=`<div class="banner info">Assign a driver to a booking in <b>Vehicles to hire</b> and it appears here as a run sheet.</div>`; return; }
+  const byDriver={};
+  assigned.forEach(b=>(byDriver[b.driver_name]=byDriver[b.driver_name]||[]).push(b));
+  let html=`<div class="banner info small">One sheet per driver — print or WhatsApp it. Ordered by time.</div>`;
+  Object.keys(byDriver).forEach(dn=>{
+    const list=byDriver[dn].sort((a,b)=>(a.date+a.depart_time).localeCompare(b.date+b.depart_time));
+    const reg=list[0].vehicle_reg, ph=list[0].driver_phone;
+    let stops='';
+    list.forEach((b,i)=>{
+      const fams=b.covered.map(c=>`${esc(c.family)} (${c.people})`).join(' · ');
+      const verb=b.purpose==='departure'?'Leave Bidar by':'Pick up at';
+      stops+=`<div class="runstop"><div class="num">${i+1}</div><div>
+        <span class="t">${b.depart_time||'—'}</span> — <b>${esc(b.route_from)}</b> → ${esc(b.route_to)} · ${dmy(b.date)}<br>
+        <span class="small">${verb} — ${fams} = <b>${bookingPeople(b)} people</b></span><br>
+        <span class="small muted">${vlabel(b.vehicle_type)}${reg?' · '+esc(reg):''}</span>
+      </div></div>`;
+    });
+    html+=`<div class="card">
+      <div class="topbar" style="margin:0"><div><b>${esc(dn)}</b>${ph?' · '+esc(ph):''} · ${esc(vlabel(list[0].vehicle_type))}${reg?' · '+esc(reg):''}</div></div>
+      ${stops}</div>`;
+  });
+  document.getElementById('run').innerHTML=html;
+}
+
+/* ---------- TIMELINE ---------- */
+function renderTime(){
+  const arr=allLegs().filter(l=>l.dir==='arrival'&&l.need).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  let html=`<div class="banner info small">Arrivals in time order. Bars close together = overlap (share a vehicle); long gaps = a driver is free.</div><div class="card timeline">`;
+  arr.forEach((l,i)=>{
+    const prev=arr[i-1];
+    const hot = (prev && prev.date===l.date && mins(l.time)-mins(prev.time)<=60) ||
+                (arr[i+1] && arr[i+1].date===l.date && mins(arr[i+1].time)-mins(l.time)<=60);
+    if(prev && prev.date===l.date && mins(l.time)-mins(prev.time)>90)
+      html+=`<div class="gap">⌄ ${Math.round((mins(l.time)-mins(prev.time))/60*10)/10}h gap — driver free ⌄</div>`;
+    html+=`<div class="slot"><div class="t">${l.time}</div><div class="ev ${hot?'hot':''}">${l.dir==='arrival'?'✈':'🚉'} <b>${esc(l.from)}</b> — ${esc(l.family)} (${l.people})${l.flight?' · '+esc(l.flight):''} ${l.bookingId?'<span class="chip ok small">booked</span>':''}</div></div>`;
+  });
+  html+='</div>';
+  document.getElementById('time').innerHTML=html;
+}
+
+/* ---------- tabs + boot ---------- */
+function renderAll(){ renderHire(); renderPlan(); renderRun(); renderTime(); }
+const tabs=[...document.querySelectorAll('.tab')];
+const secs={hire:document.getElementById('hire'),plan:document.getElementById('plan'),run:document.getElementById('run'),time:document.getElementById('time')};
+function switchTab(t){ tabs.forEach(x=>x.classList.toggle('active',x.dataset.t===t)); Object.entries(secs).forEach(([k,el])=>el.classList.toggle('hide',k!==t)); window.scrollTo({top:0,behavior:'smooth'}); }
+tabs.forEach(t=>t.onclick=()=>switchTab(t.dataset.t));
+renderAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Family · admin</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="btn small btn-ghost" href="admin-list.html">← All</a>
+    <span id="who" style="font-weight:700"></span>
+    <a class="btn small btn-ghost" id="wa" href="#">💬 WhatsApp</a>
+  </div>
+
+  <div class="progress">
+    <div class="steplabel"><span id="stepname">Review</span><span id="stepnum">Step 1 of 4</span></div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+  </div>
+
+  <div id="stage"></div>
+</div>
+
+<div class="sticky"><div class="inner">
+  <button class="btn btn-ghost" id="back" onclick="prev()">← Back</button>
+  <button class="btn btn-primary" id="next" onclick="next()">Continue →</button>
+</div></div>
+
+<script src="data.js"></script>
+<script>
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ref=new URLSearchParams(location.search).get('ref') || STATE.regs[0].ref;
+const reg=STATE.regs.find(r=>r.ref===ref) || STATE.regs[0];
+const NAMES=['Review','Transport','Assign','Confirm']; let s=1;
+document.getElementById('who').textContent=reg.family+' · '+reg.ref.replace('BDAY-2026-','');
+document.getElementById('wa').onclick=()=>{alert('Prototype: WhatsApp '+reg.phone);return false;};
+
+function legRow(l){
+  const b=l.bookingId?STATE.bookings.find(x=>x.id===l.bookingId):null;
+  const when = l.tbc||!l.date ? '<span class="chip gold">date not booked</span>' : dmy(l.date).replace(' 2026','')+(l.time?(' · '+l.time):(l.leaveBy?(' · leave '+l.leaveBy):''));
+  const st = !l.need ? '<span class="chip ok">no transport</span>'
+    : b ? (b.driver_name?'<span class="chip ok">driver set</span>':'<span class="chip plan">booked, no driver</span>')
+    : '<span class="chip req">not booked</span>';
+  return `<div class="legcard"><div class="lh"><b>${l.dir}</b> ${st}</div>
+    <p class="small muted" style="margin:0">${esc(l.from)} → ${esc(l.to)} · ${when} · ${l.people} ppl${l.flight?(' · '+esc(l.flight)):''}${l.flightOut?(' · out '+esc(l.flightOut)):''}</p></div>`;
+}
+
+function render(){
+  document.getElementById('fill').style.width=(s/4*100)+'%';
+  document.getElementById('stepnum').textContent='Step '+s+' of 4';
+  document.getElementById('stepname').textContent=NAMES[s-1];
+  document.getElementById('back').style.visibility=s===1?'hidden':'visible';
+  document.getElementById('next').textContent = s===4?'Done ✓':'Continue →';
+  const st=document.getElementById('stage');
+
+  if(s===1){ // Review
+    st.innerHTML=`<div class="card">
+      <h2 style="margin-top:0">Review</h2>
+      <div class="sum"><dl>
+        <dt>Contact</dt><dd>${esc(reg.contact)}</dd>
+        <dt>Phone</dt><dd>${esc(reg.phone)}</dd>
+        <dt>People</dt><dd>${reg.people}</dd>
+        <dt>Reference</dt><dd>${reg.ref}</dd>
+      </dl></div>
+      ${reg.reviewed?'<div class="banner ok">Marked reviewed.</div>':'<button class="btn btn-primary" onclick="markReviewed()">Mark as reviewed</button>'}
+    </div>`;
+  }
+  if(s===2){ // Transport
+    st.innerHTML=`<div class="card"><h2 style="margin-top:0">Transport legs</h2>
+      ${reg.legs.map(legRow).join('')||'<p class="muted">No legs.</p>'}</div>`;
+  }
+  if(s===3){ // Assign
+    const need=reg.legs.filter(l=>l.need);
+    st.innerHTML=`<div class="card"><h2 style="margin-top:0">Assign</h2>
+      <p class="muted small">Set the driver on each booked leg. One vehicle may also carry other families — the driver applies to all of them.</p>
+      ${need.map(assignBlock).join('')}</div>`;
+  }
+  if(s===4){ // Confirm
+    const booked=reg.legs.filter(l=>l.need && l.bookingId);
+    const lines=booked.map(l=>{const b=STATE.bookings.find(x=>x.id===l.bookingId);
+      return `${esc(l.from)} → ${esc(l.to)} · ${l.tbc||!l.date?'date TBC':dmy(l.date).replace(' 2026','')}<br>
+      &nbsp;&nbsp;Driver: ${esc(b.driver_name)||'(none yet)'} · ${esc(b.driver_phone)} · ${vlabel(b.vehicle_type)}`;}).join('<br><br>');
+    st.innerHTML=`<div class="card"><h2 style="margin-top:0">Confirm &amp; email ${esc(reg.family)}</h2>
+      <div class="banner ok" style="text-align:left">Dear guest, your local transport is taken care of — <b>nothing to pay</b>.<br><br>
+        ${lines||'No booked transport yet.'}<br><br>If plans change, use your edit link.</div>
+      <p class="hint">🔒 No cost shown to the family.</p>
+      <button class="btn btn-primary" onclick="alert('Prototype: confirmation emailed to '+reg.contact)">Send confirmation to ${esc(reg.family)}</button>
+    </div>`;
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function assignBlock(l){
+  if(!l.bookingId) return `<div class="legcard"><div class="lh"><b>${l.dir}</b> <span class="chip req">not booked</span></div>
+    <p class="small muted">${esc(l.from)} → ${esc(l.to)}</p>
+    <a class="btn small btn-ghost" href="admin-reports.html">Book a vehicle in the planner →</a></div>`;
+  const b=STATE.bookings.find(x=>x.id===l.bookingId);
+  const others=b.covered.filter(c=>c.ref!==reg.ref).map(c=>c.family);
+  return `<div class="legcard"><div class="lh"><b>${l.dir}</b> <span class="chip plan">${vlabel(b.vehicle_type)} · ${b.id}</span></div>
+    <p class="small muted" style="margin:0 0 6px">${esc(l.from)} → ${esc(l.to)}${others.length?(' · shared with '+others.join(', ')):''}</p>
+    <div class="btn-row">
+      <div style="flex:1"><label class="fl small">Driver</label><input type="text" value="${esc(b.driver_name)}" onchange="setDrv('${b.id}','driver_name',this.value)"></div>
+      <div style="flex:1"><label class="fl small">Phone</label><input type="tel" value="${esc(b.driver_phone)}" onchange="setDrv('${b.id}','driver_phone',this.value)"></div>
+    </div></div>`;
+}
+function setDrv(id,f,v){ const patch={[f]:v}; const b=STATE.bookings.find(x=>x.id===id); if(f==='driver_name'&&v&&b.status==='to_book')patch.status='assigned'; updateBooking(id,patch); }
+function markReviewed(){ reg.reviewed=true; save(); render(); }
+function next(){ if(s<4){s++;render();} else location='admin.html'; }
+function prev(){ if(s>1){s--;render();} }
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+---
+import '../styles/global.css';
+import { config } from '../lib/config';
+
+interface Props {
+  title: string;
+  wide?: boolean;
+  /** show the floating WhatsApp help button (default true on guest pages) */
+  help?: boolean;
+}
+const { title, wide = false, help = true } = Astro.props;
+const wa = config.event.organiserWhatsapp;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <title>{title}</title>
+</head>
+<body>
+  <div class={wide ? 'wrap wrap-wide' : 'wrap'}>
+    <slot />
+  </div>
+
+  {help && (
+    <a
+      class="fab"
+      href={wa ? `https://wa.me/${wa.replace(/[^0-9]/g, '')}` : '#'}
+      target="_blank"
+      rel="noopener"
+    >💬 Need help?</a>
+  )}
+</body>
+</html>

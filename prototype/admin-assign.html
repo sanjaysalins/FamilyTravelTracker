@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assign drivers</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap jobcard">
+  <div class="progress">
+    <div class="steplabel"><span>Assign a driver</span><span id="prog">—</span></div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+  </div>
+  <div id="stage"></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const QUEUE = needDriverBookings().map(b=>b.id);   // fixed list at load
+let i=0;
+
+function render(){
+  const stage=document.getElementById('stage');
+  if(i>=QUEUE.length){
+    document.getElementById('fill').style.width='100%';
+    document.getElementById('prog').textContent='Done';
+    stage.innerHTML=`<div class="card center">
+      <div style="font-size:3rem">🎉</div>
+      <h1>All vehicles have a driver</h1>
+      <p class="muted">${QUEUE.length} sorted. Next: tell the families.</p>
+      <a class="btn btn-primary" href="admin-confirm.html">Confirm &amp; email families →</a>
+      <a class="btn btn-ghost" href="admin.html" style="margin-top:10px">Back to What needs you</a>
+    </div>`;
+    return;
+  }
+  const b=STATE.bookings.find(x=>x.id===QUEUE[i]);
+  document.getElementById('fill').style.width=((i)/QUEUE.length*100)+'%';
+  document.getElementById('prog').textContent=`${i+1} of ${QUEUE.length}`;
+  const fams=b.covered.map(c=>`${esc(c.family)} (${c.people})`).join(' · ');
+  const verb=b.purpose==='departure'?`Leave Bidar by ${b.depart_time} IST`:`Pickup ${b.depart_time} IST`;
+  stage.innerHTML=`<div class="card">
+    <p class="ts muted" style="margin:0">${dmy(b.date)} · ${b.id}</p>
+    <p class="jobbig">${esc(b.route_from)} → ${esc(b.route_to)}</p>
+    <p class="small muted" style="margin:0 0 6px">${verb} · ${vlabel(b.vehicle_type)} (${b.seats} seats)</p>
+    <div class="banner info small" style="margin:8px 0">Carrying: ${fams} = <b>${bookingPeople(b)} people</b></div>
+
+    <label class="fl">Driver name</label>
+    <input type="text" id="dn" value="${esc(b.driver_name)}" placeholder="e.g. Suresh">
+    <label class="fl">Driver phone</label>
+    <input type="tel" id="dp" value="${esc(b.driver_phone)}" placeholder="+91 …">
+    <label class="fl">Vehicle reg</label>
+    <input type="text" id="dr" value="${esc(b.vehicle_reg)}" placeholder="TS09 AB 1234">
+    <p class="hint">🔒 You don't enter cost here — that stays on the booking, never shown to the family.</p>
+  </div>
+  <div class="sticky"><div class="inner">
+    <button class="btn btn-ghost" onclick="skip()">Skip for now</button>
+    <button class="btn btn-primary" onclick="saveNext()">Save &amp; next →</button>
+  </div></div>`;
+}
+function saveNext(){
+  const id=QUEUE[i];
+  updateBooking(id,{ driver_name:val('dn'), driver_phone:val('dp'), vehicle_reg:val('dr'),
+                     status: val('dn') ? 'assigned' : 'to_book' });
+  i++; render();
+}
+function skip(){ i++; render(); }
+function val(id){ return document.getElementById(id).value.trim(); }
+
+// empty state
+if(!QUEUE.length){
+  document.getElementById('stage').innerHTML=`<div class="card center">
+    <div style="font-size:3rem">✅</div>
+    <h1>No vehicles waiting for a driver</h1>
+    <p class="muted">Accept some pickup suggestions first, or you're all caught up.</p>
+    <a class="btn btn-primary" href="admin-reports.html">Open the planner</a>
+    <a class="btn btn-ghost" href="admin.html" style="margin-top:10px">Back to What needs you</a>
+  </div>`;
+  document.getElementById('prog').textContent='0 of 0';
+} else { render(); }
+</script>
+</body>
+</html>
