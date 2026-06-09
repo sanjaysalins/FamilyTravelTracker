@@ -262,3 +262,123 @@ export function buildRegistration(input: BuildInput): BuildResult {
 
   return { ok: true, doc };
 }
+
+/* ============================================================
+   Edit flow (Phase 3)
+   ============================================================ */
+
+const carrierToMode = (c: TransportLeg['carrier_type']): string => (c === 'own' ? 'car' : c ?? 'unknown');
+
+/** Flatten a stored Registration into the form's flat field map (inverse of buildRegistration),
+ *  for pre-filling the edit wizard. */
+export function docToFormValues(doc: Registration): Record<string, string> {
+  const v: Record<string, string> = {};
+  const set = (k: string, val: string | number | null | undefined) => { v[k] = val == null ? '' : String(val); };
+
+  set('first', doc.main_contact_first);
+  set('surname', doc.main_contact_surname);
+  set('email', doc.email);
+  set('phone', doc.phone_raw);
+  set('home_city', doc.home_city);
+  set('home_country', doc.home_country);
+  set('relationship', doc.relationship);
+  set('party_size', doc.party_size);
+  v.people_json = JSON.stringify(doc.party_members ?? []);
+  set('special_requirements', doc.special_requirements);
+  v.consent = doc.consent_given ? 'on' : '';
+  v.final_ok = 'on';
+  v.wa_same = doc.whatsapp_same_as_phone ? 'on' : '';
+  if (!doc.whatsapp_same_as_phone) set('wa_phone', doc.whatsapp_e164);
+
+  const fillLeg = (prefix: string, leg: TransportLeg | undefined) => {
+    if (!leg) return;
+    set(`${prefix}_from`, leg.from_location);
+    set(`${prefix}_to`, leg.to_location);
+    set(`${prefix}_date`, leg.travel_date);
+    v[`${prefix}_tbc`] = leg.date_tbc ? 'on' : '';
+    set(`${prefix}_time`, leg.travel_time);
+    set(`${prefix}_mode`, carrierToMode(leg.carrier_type));
+    set(`${prefix}_ref`, leg.carrier_ref);
+    set(`${prefix}_people`, leg.people_on_this_leg);
+    v[`${prefix}_transport`] = leg.transport_needed ? 'yes' : 'no';
+  };
+  fillLeg('arr', doc.legs.find((l) => l.direction === 'arrival'));
+  const departure = doc.legs.find((l) => l.direction === 'departure');
+  fillLeg('dep', departure);
+  const leaveBy = departure?.guest_notes?.match(/Prefers to leave by (.+)/);
+  if (leaveBy) set('dep_leaveby', leaveBy[1]);
+
+  doc.legs.filter((l) => l.direction === 'internal').slice(0, 2).forEach((leg, i) => {
+    const p = `int${i + 1}`;
+    set(`${p}_from`, leg.from_location);
+    set(`${p}_to`, leg.to_location);
+    set(`${p}_date`, leg.travel_date);
+    set(`${p}_people`, leg.people_on_this_leg);
+    v[`${p}_transport`] = leg.transport_needed ? 'yes' : '';
+  });
+  return v;
+}
+
+// Guest-editable leg fields — a change in any of these means the leg was "touched".
+const GUEST_LEG_FIELDS: Array<keyof TransportLeg> = [
+  'from_location', 'to_location', 'travel_date', 'date_tbc', 'travel_time',
+  'carrier_type', 'carrier_ref', 'people_on_this_leg', 'transport_needed', 'guest_notes',
+];
+const legTouched = (a: TransportLeg, b: TransportLeg): boolean => GUEST_LEG_FIELDS.some((f) => a[f] !== b[f]);
+
+/** Merge a freshly-rebuilt doc (guest's new answers) onto the existing stored doc, preserving
+ *  admin leg-planning and applying the edit-after-confirm cascade (PRD §8.3, plan Phase 3.3). */
+export function applyEdit(existing: Registration, rebuilt: Registration, now: string): Registration {
+  const wasConfirmed = existing.status === 'confirmed';
+  const oldByOrder = new Map(existing.legs.map((l) => [l.leg_order, l]));
+
+  const legs: TransportLeg[] = rebuilt.legs.map((nl) => {
+    const ol = oldByOrder.get(nl.leg_order);
+    if (!ol || ol.direction !== nl.direction) return nl; // added leg: guest-derived as-is
+
+    const merged: TransportLeg = {
+      ...nl,
+      id: ol.id, // keep id so any vehicle_booking covered_legs reference stays valid
+      vehicle_booking_id: ol.vehicle_booking_id,
+      pickup_point: ol.pickup_point,
+      pickup_time_confirmed: ol.pickup_time_confirmed,
+      driver_name: ol.driver_name,
+      driver_phone_e164: ol.driver_phone_e164,
+      admin_notes: ol.admin_notes,
+      confirmation_sent_at: ol.confirmation_sent_at,
+      status: ol.status,
+    };
+    if (!nl.transport_needed) {
+      merged.status = 'not_required';
+    } else if (ol.status === 'confirmed') {
+      merged.status = legTouched(ol, nl) ? 'planned' : 'confirmed'; // cascade: only touched legs reset
+    } else if (ol.status === 'planned' || ol.status === 'needs_clarification') {
+      merged.status = ol.status; // keep admin progress
+    } else {
+      merged.status = 'requested';
+    }
+    return merged;
+  });
+
+  const audit = [...existing.audit, { at: now, actor: 'guest' as const, action: 'edited', details: null }];
+  if (wasConfirmed) audit.push({ at: now, actor: 'guest' as const, action: 'edited_after_confirm', details: null });
+
+  return {
+    ...rebuilt,
+    reference_number: existing.reference_number,
+    edit_token_hash: existing.edit_token_hash,
+    edit_token_created_at: existing.edit_token_created_at,
+    edit_token_expires_at: existing.edit_token_expires_at,
+    edit_token_revoked_at: existing.edit_token_revoked_at,
+    consent_at: existing.consent_at ?? rebuilt.consent_at,
+    status: wasConfirmed ? 'in_review' : existing.status,
+    confirmed_at: existing.confirmed_at,
+    edited_after_confirm: wasConfirmed ? true : existing.edited_after_confirm,
+    admin_notes: existing.admin_notes,
+    created_at: existing.created_at,
+    updated_at: now,
+    legs,
+    audit,
+    emails: existing.emails,
+  };
+}

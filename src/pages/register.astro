@@ -1,7 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
+import RegistrationForm from '../components/RegistrationForm.astro';
 import { config } from '../lib/config';
-import { CSRF_COOKIE, CSRF_FIELD, issueCsrf } from '../lib/csrf';
+import { CSRF_COOKIE, issueCsrf } from '../lib/csrf';
 
 // If a previous POST failed validation, /api/register set a one-shot "flash" cookie with the
 // errors + submitted values so we can re-render inline (no data lost, works without JS).
@@ -11,279 +12,26 @@ if (flashRaw) {
   try { flash = JSON.parse(flashRaw); } catch { /* ignore */ }
   Astro.cookies.delete('ftc_form', { path: '/' });
 }
-const errors = flash.errors ?? {};
-const values = flash.values ?? {};
 
 // CSRF: set the cookie and render the SAME token into a hidden field (double-submit).
 const csrf = issueCsrf();
 Astro.cookies.set(CSRF_COOKIE, csrf, {
   path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200,
 });
-// Submission nonce (server-side double-submit / refresh idempotency).
-const nonce = issueCsrf();
-
-const v = (name: string): string => values[name] ?? '';
-const has = (name: string): boolean => name in errors;
-const eMsg = (name: string): string => errors[name] ?? '';
-const radio = (name: string, val: string, dflt = ''): boolean => (values[name] ?? dflt) === val;
-const isChecked = (name: string, dflt = false): boolean => (name in values ? values[name] === 'on' : dflt);
+const nonce = issueCsrf(); // submission nonce (idempotency)
 
 const { town, birthdayName, birthdayAge } = config.event;
-const hasErrors = Object.keys(errors).length > 0;
-
-const REGIONS: Array<[string, string]> = [
-  ['IN', '🇮🇳 India +91'], ['GB', '🇬🇧 UK +44'], ['US', '🇺🇸 US/Canada +1'],
-  ['AE', '🇦🇪 UAE +971'], ['SG', '🇸🇬 Singapore +65'], ['AU', '🇦🇺 Australia +61'],
-];
-const MODES: Array<[string, string]> = [
-  ['flight', 'Flight'], ['train', 'Train'], ['bus', 'Bus'], ['car', 'Car (own/driver)'], ['unknown', 'Not sure'],
-];
-const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
 ---
 <Base title="Register travel details">
-  <div class="progress" id="progress" hidden>
-    <div class="steplabel"><span id="stepname">About you</span><span id="stepnum">Step 1 of 5</span></div>
-    <div class="bar"><div class="fill" id="fill"></div></div>
-  </div>
-
   <h1>Register travel details</h1>
   <p class="muted small">{birthdayName}'s {birthdayAge}th · {town}. Takes about 5 minutes — you can edit later, and it's fine if some details aren't final yet.</p>
-  <p><button type="button" class="btn small btn-ghost" id="startfresh" hidden style="width:auto">Start a new (blank) form</button></p>
 
-  {hasErrors && (
-    <div class="banner warn"><b>Please check the highlighted fields below</b> and try again.</div>
-  )}
-
-  <form method="POST" action="/api/register" id="regform" novalidate data-has-flash={hasErrors ? '1' : '0'}>
-    <input type="hidden" name={CSRF_FIELD} value={csrf} />
-    <input type="hidden" name="submit_nonce" value={nonce} />
-
-    <!-- STEP 1 -->
-    <section class="step" data-step="1" data-name="About you">
-      <div class="card">
-        <h2>About you</h2>
-        <p class="muted small">The main person we should contact for this family group.</p>
-
-        <div class="btn-row">
-          <div style="flex:1">
-            <label class="fl" for="first">First name <span class="req">*</span></label>
-            <input id="first" type="text" name="first" value={v('first')} autocomplete="given-name" />
-            {has('first') && <p class="err">{eMsg('first')}</p>}
-          </div>
-          <div style="flex:1">
-            <label class="fl" for="surname">Surname</label>
-            <input id="surname" type="text" name="surname" value={v('surname')} autocomplete="family-name" />
-          </div>
-        </div>
-
-        <label class="fl" for="email">Email address <span class="req">*</span></label>
-        <input id="email" type="email" name="email" value={v('email')} autocomplete="email" />
-        <p class="hint">We'll email your details and a private link to edit them.</p>
-        {has('email') && <p class="err">{eMsg('email')}</p>}
-
-        <label class="fl" for="phone">Mobile number <span class="req">*</span></label>
-        <div class="phone">
-          <select name="phone_region" aria-label="Country code">
-            {REGIONS.map(([code, label]) => (
-              <option value={code} selected={(values.phone_region ?? config.phoneRegion) === code}>{label}</option>
-            ))}
-          </select>
-          <input id="phone" type="tel" name="phone" value={v('phone')} autocomplete="tel" />
-        </div>
-        <p class="hint">Example: 98765 43210. Spaces are fine.</p>
-        <p class="small" id="phonemsg" aria-live="polite"></p>
-        {has('phone') && <p class="err">{eMsg('phone')}</p>}
-
-        <label class="choice" style="margin-top:14px">
-          <input type="checkbox" name="wa_same" checked={isChecked('wa_same', true)} />
-          <span>I use WhatsApp on this same number</span>
-        </label>
-
-        <div id="waBlock" hidden>
-          <label class="fl" for="wa_phone">WhatsApp number</label>
-          <div class="phone">
-            <select name="wa_region" aria-label="WhatsApp country code">
-              {REGIONS.map(([code, label]) => (
-                <option value={code} selected={(values.wa_region ?? config.phoneRegion) === code}>{label}</option>
-              ))}
-            </select>
-            <input id="wa_phone" type="tel" name="wa_phone" value={v('wa_phone')} />
-          </div>
-          <p class="hint">The number that has WhatsApp — we'll send travel updates there.</p>
-        </div>
-
-        <div class="btn-row" style="margin-top:6px">
-          <div style="flex:1">
-            <label class="fl" for="home_city">Home city</label>
-            <input id="home_city" type="text" name="home_city" value={v('home_city')} />
-          </div>
-          <div style="flex:1">
-            <label class="fl" for="home_country">Home country <span class="req">*</span></label>
-            <input id="home_country" type="text" name="home_country" value={v('home_country')} autocomplete="country-name" />
-            {has('home_country') && <p class="err">{eMsg('home_country')}</p>}
-          </div>
-        </div>
-
-        <label class="choice" style="margin-top:16px; align-items:flex-start">
-          <input type="checkbox" name="consent" checked={isChecked('consent', false)} />
-          <span><b>I agree to share these details</b><br />
-          <span class="muted small">We use them only to arrange your travel, pickups, food and stay for {birthdayName}'s celebration. Only the organiser can see them. <a href="/privacy">Privacy note</a>.</span></span>
-        </label>
-        {has('consent') && <p class="err">{eMsg('consent')}</p>}
-      </div>
-    </section>
-
-    <!-- STEP 2 -->
-    <section class="step" data-step="2" data-name="Who's coming">
-      <div class="card">
-        <h2>Who's coming</h2>
-        <p class="muted small">Including yourself.</p>
-        <label class="fl" for="party_size">How many people are coming? <span class="req">*</span></label>
-        <div class="countbox">
-          <select id="party_size" name="party_size">
-            {sizes.map((n) => <option value={n} selected={(values.party_size ?? '2') === n}>{n}</option>)}
-          </select>
-          <span class="bigcount">people in your group</span>
-        </div>
-        {has('party_size') && <p class="err">{eMsg('party_size')}</p>}
-        <div id="people" class="people-list" style="margin-top:14px"></div>
-        <button type="button" class="btn btn-ghost" id="addperson" hidden style="margin-top:8px">+ Add another person</button>
-        <input type="hidden" name="people_json" value={v('people_json')} />
-        <p class="hint">Names are optional — the number is what we need. Tap ✕ to remove anyone.</p>
-      </div>
-    </section>
-
-    <!-- STEP 3 -->
-    <section class="step" data-step="3" data-name="Getting there & going home">
-      <div class="card">
-        <h2>Getting there</h2>
-        <div class="btn-row">
-          <div style="flex:1"><label class="fl" for="arr_from">From <span class="req">*</span></label>
-            <input id="arr_from" type="text" name="arr_from" value={v('arr_from')} placeholder="e.g. Hyderabad Airport" />
-            {has('arr_from') && <p class="err">{eMsg('arr_from')}</p>}</div>
-          <div style="flex:1"><label class="fl" for="arr_to">To <span class="req">*</span></label>
-            <input id="arr_to" type="text" name="arr_to" value={v('arr_to') || town} />
-            {has('arr_to') && <p class="err">{eMsg('arr_to')}</p>}</div>
-        </div>
-        <label class="fl" for="arr_date">Arrival date</label>
-        <input id="arr_date" type="date" name="arr_date" value={v('arr_date')} />
-        <label class="choice" style="margin-top:8px"><input type="checkbox" name="arr_tbc" checked={isChecked('arr_tbc')} /> <span>Not booked yet</span></label>
-
-        <div class="btn-row" style="margin-top:6px">
-          <div style="flex:1"><label class="fl" for="arr_time">Arrival time</label>
-            <input id="arr_time" type="time" name="arr_time" value={v('arr_time')} /></div>
-          <div style="flex:1"><label class="fl" for="arr_mode">Mode</label>
-            <select id="arr_mode" name="arr_mode">
-              {MODES.map(([val, label]) => <option value={val} selected={radio('arr_mode', val, 'flight') }>{label}</option>)}
-            </select></div>
-        </div>
-        <label class="fl" for="arr_ref">Flight / train number (optional)</label>
-        <input id="arr_ref" type="text" name="arr_ref" value={v('arr_ref')} />
-
-        <label class="fl" style="margin-top:18px">Do you need a pickup when you arrive? <span class="req">*</span></label>
-        <div class="choices">
-          <label class="choice"><input type="radio" name="arr_transport" value="yes" checked={radio('arr_transport', 'yes', 'yes')} /> <b>Yes, please arrange a pickup</b></label>
-          <label class="choice"><input type="radio" name="arr_transport" value="no" checked={radio('arr_transport', 'no')} /> <b>No, we'll arrange our own</b></label>
-          <label class="choice"><input type="radio" name="arr_transport" value="not_sure" checked={radio('arr_transport', 'not_sure')} /> <b>Not sure yet</b></label>
-        </div>
-        {has('arr_transport') && <p class="err">{eMsg('arr_transport')}</p>}
-      </div>
-
-      <div class="card">
-        <h2>Going home</h2>
-        <div class="btn-row">
-          <div style="flex:1"><label class="fl" for="dep_from">From <span class="req">*</span></label>
-            <input id="dep_from" type="text" name="dep_from" value={v('dep_from') || town} />
-            {has('dep_from') && <p class="err">{eMsg('dep_from')}</p>}</div>
-          <div style="flex:1"><label class="fl" for="dep_to">To <span class="req">*</span></label>
-            <input id="dep_to" type="text" name="dep_to" value={v('dep_to')} placeholder="e.g. Hyderabad Airport" />
-            {has('dep_to') && <p class="err">{eMsg('dep_to')}</p>}</div>
-        </div>
-        <label class="fl" for="dep_date">Departure date</label>
-        <input id="dep_date" type="date" name="dep_date" value={v('dep_date')} />
-        <label class="choice" style="margin-top:8px"><input type="checkbox" name="dep_tbc" checked={isChecked('dep_tbc')} /> <span>Not booked yet</span></label>
-
-        <label class="fl" for="dep_ref">Return flight / train number (optional)</label>
-        <input id="dep_ref" type="text" name="dep_ref" value={v('dep_ref')} />
-
-        <label class="fl" for="dep_time">What time does your flight / train leave?</label>
-        <input id="dep_time" type="time" name="dep_time" value={v('dep_time')} />
-        <div class="banner info" style="margin-top:8px">🕒 {town} to the airport hub takes time — we'll plan your car to leave early enough, counting back from this time plus check-in.</div>
-
-        <label class="fl" for="dep_leaveby">Preferred time to leave {town} (optional)</label>
-        <input id="dep_leaveby" type="time" name="dep_leaveby" value={v('dep_leaveby')} />
-        <p class="hint">Leave blank and we'll suggest a time from your flight.</p>
-
-        <label class="fl" style="margin-top:14px">Do you need a drop-off? <span class="req">*</span></label>
-        <div class="choices">
-          <label class="choice"><input type="radio" name="dep_transport" value="yes" checked={radio('dep_transport', 'yes', 'yes')} /> <b>Yes, please arrange a drop-off</b></label>
-          <label class="choice"><input type="radio" name="dep_transport" value="no" checked={radio('dep_transport', 'no')} /> <b>No, we'll arrange our own</b></label>
-          <label class="choice"><input type="radio" name="dep_transport" value="not_sure" checked={radio('dep_transport', 'not_sure')} /> <b>Not sure yet</b></label>
-        </div>
-        {has('dep_transport') && <p class="err">{eMsg('dep_transport')}</p>}
-      </div>
-    </section>
-
-    <!-- STEP 4 -->
-    <section class="step" data-step="4" data-name="Travel between towns">
-      <div class="card">
-        <h2>Travel between towns</h2>
-        <p class="muted small">Any trips between towns during your stay? This is optional — up to 2.</p>
-
-        {[1, 2].map((i) => (
-          <div class="legcard inttrip" id={`inttrip${i}`} data-trip={i}>
-            <div class="lh"><b>Trip {i}</b>
-              {i === 2 && <button type="button" class="btn small btn-ghost inttrip-rm">Remove</button>}
-            </div>
-            <div class="btn-row">
-              <div style="flex:1"><label class="fl small" for={`int${i}_from`}>From</label>
-                <input id={`int${i}_from`} type="text" name={`int${i}_from`} value={v(`int${i}_from`)} /></div>
-              <div style="flex:1"><label class="fl small" for={`int${i}_to`}>To</label>
-                <input id={`int${i}_to`} type="text" name={`int${i}_to`} value={v(`int${i}_to`)} /></div>
-            </div>
-            <div class="btn-row" style="margin-top:6px">
-              <div style="flex:1"><label class="fl small" for={`int${i}_date`}>Date</label>
-                <input id={`int${i}_date`} type="date" name={`int${i}_date`} value={v(`int${i}_date`)} /></div>
-              <div style="flex:1"><label class="fl small" for={`int${i}_people`}>People</label>
-                <input id={`int${i}_people`} type="number" min="1" name={`int${i}_people`} value={v(`int${i}_people`)} /></div>
-            </div>
-            <label class="choice small" style="margin-top:8px"><input type="checkbox" name={`int${i}_transport`} value="yes" checked={values[`int${i}_transport`] === 'yes'} /> <span>We need transport for this trip</span></label>
-          </div>
-        ))}
-        <button type="button" class="btn btn-ghost" id="addtrip" hidden>+ Add another trip</button>
-        <p class="hint">Leave these blank if you have no trips between towns. The organiser can add more if needed.</p>
-      </div>
-    </section>
-
-    <!-- STEP 5 -->
-    <section class="step" data-step="5" data-name="Review & submit">
-      <div class="card">
-        <h2>Anything we should know?</h2>
-        <label class="fl" for="special_requirements">Special requirements (optional)</label>
-        <textarea id="special_requirements" name="special_requirements">{v('special_requirements')}</textarea>
-        <p class="hint">Mobility, elderly help, a baby/child seat, or diet. Please don't enter medical details.</p>
-      </div>
-      <div class="card">
-        <label class="choice" style="margin-top:2px"><input type="checkbox" name="final_ok" checked={isChecked('final_ok', false)} /> <span>These details are correct as far as I know. I can update them later.</span></label>
-      </div>
-    </section>
-
-    <div class="sticky">
-      <div class="inner">
-        <button type="button" class="btn btn-ghost" id="back" hidden>← Back</button>
-        <button type="submit" class="btn btn-primary" id="next">Submit registration ✓</button>
-      </div>
-    </div>
-  </form>
+  <RegistrationForm
+    mode="create"
+    action="/api/register"
+    csrf={csrf}
+    nonce={nonce}
+    values={flash.values ?? {}}
+    errors={flash.errors ?? {}}
+  />
 </Base>
-
-<style>
-  .err { color: var(--danger); font-size: .9rem; margin: 4px 0 0; font-weight: 600; }
-  textarea { width: 100%; }
-  #phonemsg.ok { color: var(--ok); font-weight: 600; }
-  #phonemsg.bad { color: var(--warn); }
-</style>
-
-<script>
-  import '../scripts/wizard.ts';
-</script>

@@ -12,6 +12,9 @@ function init(form: HTMLFormElement) {
   const DRAFT_KEY = 'ftc_draft_v1';
   const EXCLUDE = new Set(['csrf_token', 'submit_nonce']);
   const hasFlash = form.dataset.hasFlash === '1';
+  // Edit mode: values are pre-filled from the server; never restore/save the register draft
+  // (it would clobber the edit, and an edit isn't a "new registration").
+  const isEdit = form.dataset.mode === 'edit';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
   const val = (name: string): string => {
@@ -22,6 +25,7 @@ function init(form: HTMLFormElement) {
 
   // ---------- localStorage autosave ----------
   function saveDraft() {
+    if (isEdit) return;
     const data: Record<string, string> = {};
     for (const [k, v] of new FormData(form).entries()) {
       if (!EXCLUDE.has(k) && typeof v === 'string') data[k] = v;
@@ -41,7 +45,7 @@ function init(form: HTMLFormElement) {
       }
     });
   }
-  if (!hasFlash) {
+  if (!hasFlash && !isEdit) {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) applyDraft(JSON.parse(raw));
@@ -223,7 +227,7 @@ function init(form: HTMLFormElement) {
     if (stepnum) stepnum.textContent = `Step ${cur} of ${total}`;
     if (stepname) stepname.textContent = steps[cur - 1]?.dataset.name ?? '';
     if (back) back.hidden = cur === 1;
-    if (next) next.textContent = cur === total ? 'Submit registration ✓' : 'Save & Continue →';
+    if (next) next.textContent = cur === total ? (form.dataset.submitLabel || 'Submit registration ✓') : 'Save & Continue →';
     warn.hidden = true;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }

@@ -1,0 +1,35 @@
+---
+import Base from '../layouts/Base.astro';
+import { config } from '../lib/config';
+import { CSRF_COOKIE, CSRF_FIELD, issueCsrf } from '../lib/csrf';
+
+// After a submit, /api/find sets a one-shot cookie and redirects here to show the generic message.
+const done = Astro.cookies.get('ftc_find_done')?.value === '1';
+if (done) Astro.cookies.delete('ftc_find_done', { path: '/' });
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, {
+  path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200,
+});
+---
+<Base title="Find my registration">
+  <h1>Find my registration</h1>
+  {done ? (
+    <div class="card">
+      <h2>Check your email 📧</h2>
+      <p>If a registration matches that email address, we've sent a fresh private link to it. Please check your inbox (and spam folder).</p>
+      <a class="btn btn-ghost" href="/">Back to home</a>
+    </div>
+  ) : (
+    <div class="card">
+      <p>Enter the email you registered with and we'll send you a fresh private link to edit your details.</p>
+      <form method="POST" action="/api/find" novalidate>
+        <input type="hidden" name={CSRF_FIELD} value={csrf} />
+        <label class="fl" for="email">Email address</label>
+        <input id="email" type="email" name="email" autocomplete="email" />
+        <button type="submit" class="btn btn-primary" style="margin-top:12px">Send my link</button>
+      </form>
+      <p class="hint">For your privacy, we never show registration details from an email alone — we only email the link.</p>
+    </div>
+  )}
+</Base>

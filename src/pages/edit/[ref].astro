@@ -1,0 +1,58 @@
+---
+import Base from '../../layouts/Base.astro';
+import RegistrationForm from '../../components/RegistrationForm.astro';
+import { config } from '../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
+import { store } from '../../lib/store';
+import { verifyToken } from '../../lib/tokens';
+import { docToFormValues } from '../../lib/registration-form';
+
+const ref = Astro.params.ref ?? '';
+const token = Astro.url.searchParams.get('token') ?? '';
+const doc = await store.getRegistration(ref);
+const check = doc ? verifyToken(token, doc, new Date().toISOString()) : 'invalid';
+const ok = !!doc && check === 'ok';
+
+// Only set up the form (and CSRF) when the token is valid.
+let csrf = '';
+let values: Record<string, string> = {};
+let errors: Record<string, string> = {};
+if (ok && doc) {
+  // A failed edit POST flashes errors + attempted values back here.
+  let flash: { errors?: Record<string, string>; values?: Record<string, string> } = {};
+  const flashRaw = Astro.cookies.get('ftc_form')?.value;
+  if (flashRaw) {
+    try { flash = JSON.parse(flashRaw); } catch { /* ignore */ }
+    Astro.cookies.delete('ftc_form', { path: '/' });
+  }
+  values = flash.values ?? docToFormValues(doc);
+  errors = flash.errors ?? {};
+
+  csrf = issueCsrf();
+  Astro.cookies.set(CSRF_COOKIE, csrf, {
+    path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200,
+  });
+}
+
+const title = ok ? 'Edit your registration' : 'Link problem';
+const reason =
+  check === 'expired' ? 'This link has expired.'
+  : check === 'revoked' ? 'This link is no longer active.'
+  : 'We couldn’t open that link.';
+---
+<Base title={title}>
+  {ok && doc ? (
+    <>
+      <h1>Edit your registration</h1>
+      <p class="muted small">Reference <b>{ref}</b>. Change anything below and save — it's fine to leave details that aren't final yet.</p>
+      <RegistrationForm mode="edit" action="/api/edit" csrf={csrf} regRef={ref} token={token} values={values} errors={errors} />
+    </>
+  ) : (
+    <div class="card">
+      <h1>{reason}</h1>
+      <p>For your security, edit links are private and time-limited. You can get a fresh one sent to your email.</p>
+      <a class="btn btn-primary" href="/find">Email me a new link</a>
+      <a class="btn btn-ghost" href="/" style="margin-top:10px">Back to home</a>
+    </div>
+  )}
+</Base>

@@ -58,6 +58,9 @@ drivers, and confirms by email. Guests don't pay — **no cost is ever shown to 
 | — **52 tests** pass (`npm test`); `npm run build` clean | ✅ |
 | **Phase 2b:** wizard JS (`src/scripts/wizard.ts`) — autosave, step nav, dynamic lists, phone | ✅ done |
 | — survives back+refresh (excl. CSRF), clears draft on success; no-JS path still works | ✅ verified live |
+| **Phase 3:** edit-later flow — shared `RegistrationForm.astro`, `/edit/<ref>?token=`, `/api/edit` | ✅ done |
+| — `applyEdit` cascade (confirmed→in_review, only touched legs reset); `/find` generic resend | ✅ + tests |
+| — **59 tests** pass; verified live (reopen, bad-token refusal, round-trip). find-email = Phase-4 stub | ✅ |
 
 ## Run it now
 
@@ -112,8 +115,17 @@ guardrail blocks running destructive actions against the **live** site without t
   internal trip-2 reveal/remove; WhatsApp-number toggle; `.choice` selection styling; phone
   preview via libphonenumber-js (swapped in for intl-tel-input — no new dep); Enter-key + double-
   submit guards. Build clean; no-JS + people_json paths re-verified live.
-- **Phase 3** — ← NEXT: edit-later flow (`/edit/<ref>?token=`, reuse wizard pre-filled, edit-
-  after-confirm cascade, expiry/revoke/regenerate, "Find my registration"). **Phase 4** — email.
+- **Phase 3** — ✅ DONE. Edit-later flow. Form extracted to shared `components/RegistrationForm.astro`
+  (used by create + edit, and Phase 5 admin-edit). `/edit/<ref>?token=` verifies the token and
+  reopens the pre-filled wizard (friendly refusal page on bad/expired/revoked); `POST /api/edit`
+  re-verifies, rebuilds, and **merges onto the stored doc preserving admin leg-planning** with the
+  edit-after-confirm cascade (`applyEdit`: confirmed→in_review, only *touched* confirmed legs→planned,
+  flag + audit). `/find` + `/api/find` give the generic "we've emailed a link" response (never reveal
+  data from ref+email). Pure `docToFormValues`/`applyEdit` unit-tested; **59 tests**. Verified live:
+  edit reopens prefilled, bad token refused (GET + POST), edit round-trips. **NOTE: the find email
+  send + token regenerate is a Phase-4 stub** (lookup works, no email yet — `src/pages/api/find.ts` TODO).
+- **Phase 4** — ← NEXT: email templates & logic (Resend; test-mode; ack/confirmation/clarification/
+  updated; log to `emails[]`; never break submit). Wires the find-resend + success ack emails.
 - **Phase 5** — guided admin (port `prototype/admin*.html`: Action Centre, assign/confirm flows,
   per-family wizard, needs-you strip).
 - **Phase 6** — reports + hire list + run sheet (port `prototype/admin-reports.html`).
