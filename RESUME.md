@@ -1,7 +1,11 @@
 # RESUME — Family Travel Coordinator
 
-**Last worked:** 2026-06-08. **LIVE on Netlify** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
-Phase 0.5 mostly done. Pick up from "Next step" below.
+**Last worked:** 2026-06-09 (paused). **LIVE on Netlify** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
+
+**▶ PICK UP HERE:** Phases **0, 0.5, 1, 2a, 2b, 3 are DONE** (guest registration + edit-later flow
+fully built; 59 tests pass; `npm run build` clean). Local commits **a4a5b48 → 16f63a8** are
+**NOT pushed yet** (push `main` to deploy). **NEXT = Phase 4 (email)** — see the per-phase list below;
+it also un-stubs `/find` and the success ack email, and needs the open Phase 0.5 Resend signup (user).
 
 **Live admin token (temporary):** the `/api/admin/data` endpoint is guarded by `SESSION_SECRET`
 (value in local `.env` + Netlify env — never commit it). Admin login password is stored in `.env`
