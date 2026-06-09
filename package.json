@@ -7,6 +7,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "test": "vitest run",
+    "seed": "vite-node scripts/seed.ts",
     "gen-hash": "node scripts/gen-hash.mjs"
   },
   "dependencies": {

@@ -44,10 +44,14 @@ drivers, and confirms by email. Guests don't pay — **no cost is ever shown to 
 | — blob-survival proven (wrote a blob, redeployed, it survived) | ✅ |
 | — `APP_BASE_URL` set in Netlify | ⬜ (user to add) |
 | — one real test email via Resend | ⬜ (needs Resend signup) |
-| **Integration tests** (vitest): 25 passing — `npm test` | ✅ store + config + seed/snapshot |
+| **Integration tests** (vitest): 27 passing — `npm test` | ✅ store + config + seed/snapshot |
 | **Snapshot/restore/reset + fake-family seed** (data safety + UAT) | ✅ built + live |
 | — `src/lib/seed.ts`, `store.ts` snapshot fns, `src/pages/api/admin/data.ts` | ✅ |
 | — `astro.config.mjs` loads `.env`→`process.env` for local dev | ✅ |
+| **Phase 1:** data layer — typed read/write + seed | ✅ done |
+| — read-time **missing-field tolerance** (older docs gain new fields' defaults) in `store.ts` | ✅ + tests |
+| — seed now includes a **multi-leg journey with an internal side trip** (`BDAY-2026-0009`) | ✅ |
+| — `npm run seed [count]` CLI (`scripts/seed.ts` via vite-node) fills the store | ✅ |
 
 ## Run it now
 
@@ -88,9 +92,10 @@ guardrail blocks running destructive actions against the **live** site without t
 
 ## Then, in order (DEVELOPMENT_PLAN.md)
 
-- **Phase 1** — port `data.js` → real `store.ts` data + a seed; unit tests start (vitest).
-- **Phase 2** — guest 5-step wizard (port `prototype/register.html`) + tokens + success screen.
-- **Phase 3** — edit-later flow. **Phase 4** — email. 
+- **Phase 1** — ✅ DONE. Data layer: typed read/write to the store, read-time missing-field
+  tolerance, varied fake-family seed (incl. an internal-leg journey), `npm run seed` CLI; 27 tests.
+- **Phase 2** — guest 5-step wizard (port `prototype/register.html`) + tokens + success screen. ← NEXT
+- **Phase 3** — edit-later flow. **Phase 4** — email.
 - **Phase 5** — guided admin (port `prototype/admin*.html`: Action Centre, assign/confirm flows,
   per-family wizard, needs-you strip).
 - **Phase 6** — reports + hire list + run sheet (port `prototype/admin-reports.html`).

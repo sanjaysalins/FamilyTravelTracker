@@ -86,6 +86,75 @@ function localKV(name: string): KV {
 
 const kv = (name: string): KV => (useBlobs() ? blobKV(name) : localKV(name));
 
+/* ---- forward-compatible read (our "migration" story, plan Phase 1.3) ----
+   A document written before a field existed must never crash a newer screen.
+   On read we additively fill any ABSENT field with a safe default; present
+   values (including legitimate false/0/"") are kept untouched. This is a no-op
+   for an already-complete document. */
+
+function normalizeLeg(raw: Partial<TransportLeg>, idx: number): TransportLeg {
+  return {
+    id: raw.id ?? `leg-${idx + 1}`,
+    leg_order: raw.leg_order ?? idx + 1,
+    direction: raw.direction ?? 'arrival',
+    from_location: raw.from_location ?? '',
+    to_location: raw.to_location ?? '',
+    travel_date: raw.travel_date ?? null,
+    date_tbc: raw.date_tbc ?? false,
+    travel_time: raw.travel_time ?? null,
+    time_meaning: raw.time_meaning ?? null,
+    carrier_type: raw.carrier_type ?? null,
+    carrier_ref: raw.carrier_ref ?? null,
+    people_on_this_leg: raw.people_on_this_leg ?? 0,
+    transport_needed: raw.transport_needed ?? false,
+    guest_notes: raw.guest_notes ?? null,
+    status: raw.status ?? 'requested',
+    vehicle_booking_id: raw.vehicle_booking_id ?? null,
+    pickup_point: raw.pickup_point ?? null,
+    pickup_time_confirmed: raw.pickup_time_confirmed ?? null,
+    driver_name: raw.driver_name ?? null,
+    driver_phone_e164: raw.driver_phone_e164 ?? null,
+    admin_notes: raw.admin_notes ?? null,
+    confirmation_sent_at: raw.confirmation_sent_at ?? null,
+  };
+}
+
+function normalizeRegistration(raw: Partial<Registration>): Registration {
+  return {
+    reference_number: raw.reference_number ?? '',
+    edit_token_hash: raw.edit_token_hash ?? '',
+    edit_token_created_at: raw.edit_token_created_at ?? '',
+    edit_token_expires_at: raw.edit_token_expires_at ?? null,
+    edit_token_revoked_at: raw.edit_token_revoked_at ?? null,
+    main_contact_first: raw.main_contact_first ?? '',
+    main_contact_surname: raw.main_contact_surname ?? '',
+    email: raw.email ?? '',
+    phone_raw: raw.phone_raw ?? '',
+    phone_e164: raw.phone_e164 ?? null,
+    whatsapp_same_as_phone: raw.whatsapp_same_as_phone ?? false,
+    whatsapp_e164: raw.whatsapp_e164 ?? null,
+    home_city: raw.home_city ?? null,
+    home_country: raw.home_country ?? '',
+    relationship: raw.relationship ?? null,
+    party_size: raw.party_size ?? 1,
+    party_members: raw.party_members ?? [],
+    special_requirements: raw.special_requirements ?? null,
+    stay_type: raw.stay_type ?? null,
+    stay_location: raw.stay_location ?? null,
+    consent_given: raw.consent_given ?? false,
+    consent_at: raw.consent_at ?? null,
+    status: raw.status ?? 'submitted',
+    confirmed_at: raw.confirmed_at ?? null,
+    edited_after_confirm: raw.edited_after_confirm ?? false,
+    admin_notes: raw.admin_notes ?? null,
+    created_at: raw.created_at ?? '',
+    updated_at: raw.updated_at ?? '',
+    legs: (raw.legs ?? []).map((l, i) => normalizeLeg(l, i)),
+    audit: raw.audit ?? [],
+    emails: raw.emails ?? [],
+  };
+}
+
 /* ---- typed data access ---- */
 const registrations = () => kv('registrations');
 const vehicles = () => kv('vehicle_bookings');
@@ -101,14 +170,17 @@ export interface Snapshot {
 }
 
 export const store = {
-  // registrations
-  getRegistration: (ref: string) => registrations().get<Registration>(ref),
+  // registrations (reads normalised so older docs gain new fields' safe defaults)
+  async getRegistration(ref: string): Promise<Registration | null> {
+    const raw = await registrations().get<Registration>(ref);
+    return raw ? normalizeRegistration(raw) : null;
+  },
   putRegistration: (doc: Registration) => registrations().set(doc.reference_number, doc),
   deleteRegistration: (ref: string) => registrations().delete(ref),
   async listRegistrations(): Promise<Registration[]> {
     const keys = await registrations().list();
     const docs = await Promise.all(keys.map((k) => registrations().get<Registration>(k)));
-    return docs.filter((d): d is Registration => d !== null);
+    return docs.filter((d): d is Registration => d !== null).map(normalizeRegistration);
   },
 
   // vehicle bookings

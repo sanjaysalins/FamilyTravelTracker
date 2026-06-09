@@ -133,6 +133,22 @@ const SCENARIOS: Scenario[] = [
       { direction: 'departure', from: 'Bidar', to: 'Hyderabad (HYD)', date: '2026-10-19', time: '19:30', time_meaning: 'departure_from_origin', carrier: 'flight', ref: 'SQ509', transport_needed: true },
     ],
   },
+  {
+    // Multi-leg journey with an internal side trip: Hyderabad -> Bidar -> side trip -> back.
+    first: 'Rashid', surname: 'Khan', country: 'IN', city: 'Hyderabad', relationship: 'cousin',
+    party: [
+      { name: 'Rashid Khan', age_band: 'adult' },
+      { name: 'Ayesha Khan', age_band: 'adult' },
+      { name: 'Imran Khan', age_band: 'child' },
+      { name: 'Zara Khan', age_band: 'child' },
+    ],
+    stay_type: 'family_home', stay_location: 'With relatives in Bidar',
+    legs: [
+      { direction: 'arrival', from: 'Hyderabad (HYD)', to: 'Bidar', date: '2026-10-16', time: '10:15', time_meaning: 'arrival_at_destination', carrier: 'flight', ref: '6E7123', transport_needed: true, notes: 'Flying into Hyderabad, then on to Bidar' },
+      { direction: 'internal', from: 'Bidar', to: 'Kalaburagi (Gulbarga)', date: '2026-10-18', time: '09:30', time_meaning: 'departure_from_origin', carrier: 'own', ref: null, transport_needed: true, notes: 'Side trip to visit relatives, returning the same day' },
+      { direction: 'departure', from: 'Bidar', to: 'Hyderabad (HYD)', date: '2026-10-19', time: '07:00', time_meaning: 'departure_from_origin', carrier: 'flight', ref: '6E7124', transport_needed: true },
+    ],
+  },
 ];
 
 function pad(n: number): string {

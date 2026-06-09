@@ -157,6 +157,38 @@ describe('registrations', () => {
     expect(got?.status).toBe('confirmed');
     expect(await store.listRegistrations()).toHaveLength(1);
   });
+
+  it('fills missing fields with safe defaults when reading an older/partial doc', async () => {
+    // simulate a document written before newer fields existed
+    await store.putRegistration({
+      reference_number: 'BDAY-2026-0099',
+      legs: [{ direction: 'arrival', from_location: 'Hyderabad', to_location: 'Bidar' }],
+    } as any);
+
+    const got = await store.getRegistration('BDAY-2026-0099');
+    expect(got).not.toBeNull();
+    expect(got?.reference_number).toBe('BDAY-2026-0099'); // present value kept
+    // top-level defaults
+    expect(got?.party_size).toBe(1);
+    expect(got?.party_members).toEqual([]);
+    expect(got?.status).toBe('submitted');
+    expect(got?.consent_given).toBe(false);
+    expect(got?.emails).toEqual([]);
+    expect(got?.audit).toEqual([]);
+    // leg defaults, with present values preserved
+    expect(got?.legs[0].from_location).toBe('Hyderabad');
+    expect(got?.legs[0].leg_order).toBe(1);
+    expect(got?.legs[0].status).toBe('requested');
+    expect(got?.legs[0].transport_needed).toBe(false);
+    expect(got?.legs[0].date_tbc).toBe(false);
+  });
+
+  it('normalises through listRegistrations too', async () => {
+    await store.putRegistration({ reference_number: 'BDAY-2026-0098', legs: [] } as any);
+    const [got] = await store.listRegistrations();
+    expect(got.party_size).toBe(1);
+    expect(got.legs).toEqual([]);
+  });
 });
 
 describe('vehicle bookings', () => {

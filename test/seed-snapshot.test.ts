@@ -62,6 +62,7 @@ describe('seed generator', () => {
     expect(fams.some((f) => f.legs.some((l) => !l.transport_needed))).toBe(true); // own transport
     expect(fams.some((f) => f.legs.some((l) => l.date_tbc))).toBe(true);    // dates not booked
     expect(fams.some((f) => f.legs.length > 1)).toBe(true);                 // multi-leg
+    expect(fams.some((f) => f.legs.some((l) => l.direction === 'internal'))).toBe(true); // side trip
     expect(fams.some((f) => f.party_members.some((m) => m.age_band === 'elderly'))).toBe(true);
   });
 
