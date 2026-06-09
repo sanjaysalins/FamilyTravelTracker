@@ -52,6 +52,10 @@ drivers, and confirms by email. Guests don't pay — **no cost is ever shown to 
 | — read-time **missing-field tolerance** (older docs gain new fields' defaults) in `store.ts` | ✅ + tests |
 | — seed now includes a **multi-leg journey with an internal side trip** (`BDAY-2026-0009`) | ✅ |
 | — `npm run seed [count]` CLI (`scripts/seed.ts` via vite-node) fills the store | ✅ |
+| **Phase 2a:** guest form + validation + tokens + success (server-rendered, no-JS) | ✅ done |
+| — `lib/`: `csrf`, `tokens`, `phone`, `dates`, `reference`, `registration-form` (pure builder) | ✅ + tests |
+| — `register.astro` → `POST /api/register` → `success/[ref].astro`; CSRF + nonce idempotency | ✅ verified live |
+| — **52 tests** pass (`npm test`); `npm run build` clean | ✅ |
 
 ## Run it now
 
@@ -94,7 +98,15 @@ guardrail blocks running destructive actions against the **live** site without t
 
 - **Phase 1** — ✅ DONE. Data layer: typed read/write to the store, read-time missing-field
   tolerance, varied fake-family seed (incl. an internal-leg journey), `npm run seed` CLI; 27 tests.
-- **Phase 2** — guest 5-step wizard (port `prototype/register.html`) + tokens + success screen. ← NEXT
+- **Phase 2a** — ✅ DONE. Guest form (server-rendered 5 steps, works **without JS**) + server
+  validation + leg seeding + edit tokens + success screen. New `lib/`: `csrf`, `tokens`, `phone`,
+  `dates`, `reference`, `registration-form` (pure builder). `register.astro` → `POST /api/register`
+  → `success/[ref].astro`. CSRF double-submit, nonce idempotency, token-hash-only, handoff cookie.
+  Verified live (npm run dev): submit creates doc w/ correct legs, dup-submit = 1 record, errors
+  flash inline, CSRF 403. **52 tests pass.**
+- **Phase 2b** — ← NEXT: make it magical on a phone — `scripts/wizard.ts` localStorage autosave
+  (survive back + refresh; exclude CSRF), step nav + progress bar, sticky button, intl-tel-input
+  phone widget, dynamic people list + internal-leg add/remove.
 - **Phase 3** — edit-later flow. **Phase 4** — email.
 - **Phase 5** — guided admin (port `prototype/admin*.html`: Action Centre, assign/confirm flows,
   per-family wizard, needs-you strip).
@@ -102,6 +114,11 @@ guardrail blocks running destructive actions against the **live** site without t
 - **Phase 7** — privacy/retention + restore-tested backup. **Phase 8** — cutover. **Phase 9** — dry run.
 
 ## Watch-outs (from the plan review — already baked into the plan)
+
+- **Two local stores!** `npm run dev` (Astro+Netlify adapter) uses the **emulated Netlify Blobs**
+  sandbox (`.netlify/blobs-serve/`), while `npm run seed` (vite-node, no adapter) writes the
+  **file store** (`.data/`). They are NOT the same data. To seed what `dev` shows, POST the admin
+  `seed` action to the running dev server, or seed via the running app — not the CLI.
 
 - Security is **built in from Phase 0**, not bolted on. CSRF on every POST; escape user text.
 - Login lockout counter lives in the **`system` Blobs store** (serverless has no memory).

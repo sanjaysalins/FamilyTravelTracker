@@ -1,0 +1,88 @@
+---
+import Base from '../../layouts/Base.astro';
+import { config } from '../../lib/config';
+import { store } from '../../lib/store';
+import { buildEditLink } from '../../lib/tokens';
+
+const ref = Astro.params.ref ?? '';
+const doc = await store.getRegistration(ref);
+
+// The raw edit token is handed over once via a short-lived cookie set by /api/register.
+// We never persist it, so it's only shown on this immediate post-submit view.
+let rawToken: string | null = null;
+const handoffRaw = Astro.cookies.get('ftc_new')?.value;
+if (handoffRaw) {
+  try {
+    const h = JSON.parse(handoffRaw) as { ref?: string; token?: string };
+    if (h.ref === ref && h.token) rawToken = h.token;
+  } catch { /* ignore */ }
+  Astro.cookies.delete('ftc_new', { path: '/' });
+}
+
+const editLink = rawToken ? buildEditLink(config.appBaseUrl, ref, rawToken) : null;
+const { birthdayName } = config.event;
+---
+<Base title="Registration saved">
+  <div class="hero">
+    <div class="kicker">{birthdayName}'s celebration</div>
+    <h1>Saved — thank you! ✓</h1>
+    <p>Your travel details are with the organiser.</p>
+  </div>
+
+  {!doc && (
+    <div class="card"><p>We couldn't find that registration. If you've just submitted, please go back and try again, or use <a href="/find">Find my registration</a>.</p></div>
+  )}
+
+  {doc && (
+    <div class="card">
+      <h2>Your reference</h2>
+      <p class="bigref">{ref}</p>
+      <p class="muted small">Keep this code. The organiser may mention it.</p>
+    </div>
+  )}
+
+  {doc && editLink && (
+    <div class="card">
+      <h2>Your private edit link</h2>
+      <p>Save this link or <b>take a screenshot</b> — it's how you change your details later. We've also emailed it to you.</p>
+      <input id="editlink" class="linkbox" type="text" readonly value={editLink} />
+      <button type="button" class="btn btn-gold" id="copybtn" style="margin-top:10px">Copy link</button>
+      <a class="btn btn-primary" href={editLink} style="margin-top:10px">Edit my registration</a>
+    </div>
+  )}
+
+  {doc && !editLink && (
+    <div class="card">
+      <h2>Your edit link</h2>
+      <p>We've emailed your private edit link. If you need it again, use <a href="/find">Find my registration</a>.</p>
+    </div>
+  )}
+
+  <div class="card">
+    <a class="btn btn-ghost" href="/">Back to home</a>
+    <a class="btn btn-ghost" href="/register" style="margin-top:10px">Start a new registration</a>
+  </div>
+</Base>
+
+<style>
+  .bigref { font-size: 1.6rem; font-weight: 800; color: var(--teal-dark); letter-spacing: .02em; margin: .2em 0; }
+  .linkbox { width: 100%; font-size: .95rem; background: #FBFBF8; }
+</style>
+
+<script>
+  const btn = document.getElementById('copybtn');
+  const box = document.getElementById('editlink') as HTMLInputElement | null;
+  if (btn && box) {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(box.value);
+        btn.textContent = 'Copied ✓';
+      } catch {
+        box.select();
+        document.execCommand('copy');
+        btn.textContent = 'Copied ✓';
+      }
+      setTimeout(() => (btn.textContent = 'Copy link'), 2000);
+    });
+  }
+</script>
