@@ -56,6 +56,8 @@ drivers, and confirms by email. Guests don't pay — **no cost is ever shown to 
 | — `lib/`: `csrf`, `tokens`, `phone`, `dates`, `reference`, `registration-form` (pure builder) | ✅ + tests |
 | — `register.astro` → `POST /api/register` → `success/[ref].astro`; CSRF + nonce idempotency | ✅ verified live |
 | — **52 tests** pass (`npm test`); `npm run build` clean | ✅ |
+| **Phase 2b:** wizard JS (`src/scripts/wizard.ts`) — autosave, step nav, dynamic lists, phone | ✅ done |
+| — survives back+refresh (excl. CSRF), clears draft on success; no-JS path still works | ✅ verified live |
 
 ## Run it now
 
@@ -104,10 +106,14 @@ guardrail blocks running destructive actions against the **live** site without t
   → `success/[ref].astro`. CSRF double-submit, nonce idempotency, token-hash-only, handoff cookie.
   Verified live (npm run dev): submit creates doc w/ correct legs, dup-submit = 1 record, errors
   flash inline, CSRF 403. **52 tests pass.**
-- **Phase 2b** — ← NEXT: make it magical on a phone — `scripts/wizard.ts` localStorage autosave
-  (survive back + refresh; exclude CSRF), step nav + progress bar, sticky button, intl-tel-input
-  phone widget, dynamic people list + internal-leg add/remove.
-- **Phase 3** — edit-later flow. **Phase 4** — email.
+- **Phase 2b** — ✅ DONE. `src/scripts/wizard.ts` (progressive enhancement over 2a; form still
+  works with JS off). Step nav + progress bar + sticky button; localStorage autosave surviving
+  back+refresh (excludes CSRF; cleared on the success page); dynamic people list → `people_json`;
+  internal trip-2 reveal/remove; WhatsApp-number toggle; `.choice` selection styling; phone
+  preview via libphonenumber-js (swapped in for intl-tel-input — no new dep); Enter-key + double-
+  submit guards. Build clean; no-JS + people_json paths re-verified live.
+- **Phase 3** — ← NEXT: edit-later flow (`/edit/<ref>?token=`, reuse wizard pre-filled, edit-
+  after-confirm cascade, expiry/revoke/regenerate, "Find my registration"). **Phase 4** — email.
 - **Phase 5** — guided admin (port `prototype/admin*.html`: Action Centre, assign/confirm flows,
   per-family wizard, needs-you strip).
 - **Phase 6** — reports + hire list + run sheet (port `prototype/admin-reports.html`).

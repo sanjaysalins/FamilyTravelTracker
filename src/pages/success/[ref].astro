@@ -70,6 +70,10 @@ const { birthdayName } = config.event;
 </style>
 
 <script>
+  // The registration succeeded server-side — clear the saved draft (plan 2b: clear on the
+  // server-confirmed redirect, not on click).
+  try { localStorage.removeItem('ftc_draft_v1'); } catch { /* ignore */ }
+
   const btn = document.getElementById('copybtn');
   const box = document.getElementById('editlink') as HTMLInputElement | null;
   if (btn && box) {

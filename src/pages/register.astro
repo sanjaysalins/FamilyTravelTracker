@@ -48,12 +48,13 @@ const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
 
   <h1>Register travel details</h1>
   <p class="muted small">{birthdayName}'s {birthdayAge}th · {town}. Takes about 5 minutes — you can edit later, and it's fine if some details aren't final yet.</p>
+  <p><button type="button" class="btn small btn-ghost" id="startfresh" hidden style="width:auto">Start a new (blank) form</button></p>
 
   {hasErrors && (
     <div class="banner warn"><b>Please check the highlighted fields below</b> and try again.</div>
   )}
 
-  <form method="POST" action="/api/register" id="regform" novalidate>
+  <form method="POST" action="/api/register" id="regform" novalidate data-has-flash={hasErrors ? '1' : '0'}>
     <input type="hidden" name={CSRF_FIELD} value={csrf} />
     <input type="hidden" name="submit_nonce" value={nonce} />
 
@@ -90,12 +91,26 @@ const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
           <input id="phone" type="tel" name="phone" value={v('phone')} autocomplete="tel" />
         </div>
         <p class="hint">Example: 98765 43210. Spaces are fine.</p>
+        <p class="small" id="phonemsg" aria-live="polite"></p>
         {has('phone') && <p class="err">{eMsg('phone')}</p>}
 
         <label class="choice" style="margin-top:14px">
           <input type="checkbox" name="wa_same" checked={isChecked('wa_same', true)} />
           <span>I use WhatsApp on this same number</span>
         </label>
+
+        <div id="waBlock" hidden>
+          <label class="fl" for="wa_phone">WhatsApp number</label>
+          <div class="phone">
+            <select name="wa_region" aria-label="WhatsApp country code">
+              {REGIONS.map(([code, label]) => (
+                <option value={code} selected={(values.wa_region ?? config.phoneRegion) === code}>{label}</option>
+              ))}
+            </select>
+            <input id="wa_phone" type="tel" name="wa_phone" value={v('wa_phone')} />
+          </div>
+          <p class="hint">The number that has WhatsApp — we'll send travel updates there.</p>
+        </div>
 
         <div class="btn-row" style="margin-top:6px">
           <div style="flex:1">
@@ -131,7 +146,10 @@ const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
           <span class="bigcount">people in your group</span>
         </div>
         {has('party_size') && <p class="err">{eMsg('party_size')}</p>}
-        <p class="hint">You can add everyone's names on the next version — for now the number is enough.</p>
+        <div id="people" class="people-list" style="margin-top:14px"></div>
+        <button type="button" class="btn btn-ghost" id="addperson" hidden style="margin-top:8px">+ Add another person</button>
+        <input type="hidden" name="people_json" value={v('people_json')} />
+        <p class="hint">Names are optional — the number is what we need. Tap ✕ to remove anyone.</p>
       </div>
     </section>
 
@@ -213,8 +231,10 @@ const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
         <p class="muted small">Any trips between towns during your stay? This is optional — up to 2.</p>
 
         {[1, 2].map((i) => (
-          <div class="legcard">
-            <div class="lh"><b>Trip {i}</b></div>
+          <div class="legcard inttrip" id={`inttrip${i}`} data-trip={i}>
+            <div class="lh"><b>Trip {i}</b>
+              {i === 2 && <button type="button" class="btn small btn-ghost inttrip-rm">Remove</button>}
+            </div>
             <div class="btn-row">
               <div style="flex:1"><label class="fl small" for={`int${i}_from`}>From</label>
                 <input id={`int${i}_from`} type="text" name={`int${i}_from`} value={v(`int${i}_from`)} /></div>
@@ -230,6 +250,7 @@ const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
             <label class="choice small" style="margin-top:8px"><input type="checkbox" name={`int${i}_transport`} value="yes" checked={values[`int${i}_transport`] === 'yes'} /> <span>We need transport for this trip</span></label>
           </div>
         ))}
+        <button type="button" class="btn btn-ghost" id="addtrip" hidden>+ Add another trip</button>
         <p class="hint">Leave these blank if you have no trips between towns. The organiser can add more if needed.</p>
       </div>
     </section>
@@ -259,4 +280,10 @@ const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
 <style>
   .err { color: var(--danger); font-size: .9rem; margin: 4px 0 0; font-weight: 600; }
   textarea { width: 100%; }
+  #phonemsg.ok { color: var(--ok); font-weight: 600; }
+  #phonemsg.bad { color: var(--warn); }
 </style>
+
+<script>
+  import '../scripts/wizard.ts';
+</script>
