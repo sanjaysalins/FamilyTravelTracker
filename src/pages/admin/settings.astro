@@ -55,7 +55,8 @@ const rows: Array<[string, string]> = [
 
   <form class="card" method="POST" action="/api/admin/reset" onsubmit="return confirm('Delete ALL registrations and bookings? A one-step backup is saved first.')">
     <h2 style="margin-top:0">Delete all data</h2>
-    <p class="small muted">For after the event. A <code>_before_delete_all</code> snapshot is saved first so it can be undone.</p>
+    <p class="small muted">For after the event. A safety backup (<code>_before_delete_all</code>) is saved first, but
+    there is no one-click undo on this screen — <b>export your data above first</b> to be safe.</p>
     <input type="hidden" name="csrf_token" value={csrf} />
     <label class="choice"><input type="checkbox" name="confirm" value="yes" required /> <b>Yes, delete all family data</b></label>
     <button type="submit" class="btn btn-ghost" style="color:var(--danger); margin-top:12px">Delete all</button>

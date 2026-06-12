@@ -22,6 +22,21 @@ const skippedRemaining = pendingAll.length - queue.length;
 const csrf = issueCsrf();
 Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
 
+// Post-send flash ("Emailed the Pereira family ✓") set by /api/admin/confirm.
+let flash = '';
+const f = Astro.cookies.get('ftc_admin_flash')?.value;
+if (f) { flash = f; Astro.cookies.delete('ftc_admin_flash', { path: '/' }); }
+
+// Honest progress: total is fixed when the flow starts (carried in ?total); a booking leaves
+// pendingAll once its families are emailed, so done reflects real completion (skips don't count).
+const total = Number(Astro.url.searchParams.get('total')) || pendingAll.length;
+const done = Math.max(0, total - pendingAll.length);
+const pct = total ? Math.round((done / total) * 100) : 100;
+
+// Capacity guard: don't let the organiser email a promise the vehicle can't keep.
+const curPeople = current ? current.covered_legs.reduce((s, c) => s + c.people, 0) : 0;
+const overCapacity = !!current && curPeople > current.seats;
+
 // One cost-free preview + WhatsApp link per covered family.
 const previews = current
   ? [...new Set(current.covered_legs.map((c) => c.registration_ref))].map((ref) => {
@@ -35,9 +50,11 @@ const previews = current
 <Base title="Confirm & email" help={false}>
   <div class="jobcard">
     <div class="progress">
-      <div class="steplabel"><span>Confirm &amp; email</span><span>{queue.length ? `${queue.length} to go` : 'Done'}</span></div>
-      <div class="bar"><div class="fill" style={`width:${queue.length ? 8 : 100}%`}></div></div>
+      <div class="steplabel"><span>Confirm &amp; email</span><span>{current ? `${queue.length} to go · ${done}/${total} done` : 'Done'}</span></div>
+      <div class="bar"><div class="fill" style={`width:${current ? pct : 100}%`}></div></div>
     </div>
+
+    {flash && <div class={flash.startsWith('⚠') ? 'banner warn' : 'banner ok'}>{flash}</div>}
 
     {!current && skippedRemaining > 0 && (
       <div class="card center">
@@ -72,13 +89,22 @@ const previews = current
         ))}
         <p class="hint">🔒 No cost, operator or budget is included.</p>
 
+        {overCapacity && (
+          <div class="banner warn"><b>⚠ Over capacity:</b> this vehicle seats {current.seats} but is carrying {curPeople} people.
+          Fix the booking before emailing the family — don't promise a seat that isn't there.
+          <a href={`/admin/vehicles/${current.id}`}>Open the booking →</a></div>
+        )}
+
         <form method="POST" action="/api/admin/confirm">
           <input type="hidden" name="csrf_token" value={csrf} />
           <input type="hidden" name="id" value={current.id} />
           <input type="hidden" name="skip" value={skipParam} />
+          <input type="hidden" name="total" value={total} />
           <div class="btn-row" style="margin-top:6px">
-            <a class="btn btn-ghost" href={`/admin/confirm?skip=${[skipParam, current.id].filter(Boolean).join(',')}`}>Skip</a>
-            <button type="submit" class="btn btn-primary">Send email &amp; next →</button>
+            <a class="btn btn-ghost" href={`/admin/confirm?total=${total}&skip=${[skipParam, current.id].filter(Boolean).join(',')}`}>Skip</a>
+            {overCapacity
+              ? <a class="btn btn-gold" href={`/admin/vehicles/${current.id}`}>Fix capacity first</a>
+              : <button type="submit" class="btn btn-primary">Send email &amp; next →</button>}
           </div>
         </form>
       </div>

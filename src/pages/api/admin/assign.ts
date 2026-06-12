@@ -20,5 +20,7 @@ export const POST: APIRoute = async (ctx) => {
     }, new Date().toISOString());
   }
   const skip = str('skip');
-  return ctx.redirect(`/admin/assign${skip ? `?skip=${encodeURIComponent(skip)}` : ''}`, 303);
+  const total = str('total');
+  const qs = [total && `total=${encodeURIComponent(total)}`, skip && `skip=${encodeURIComponent(skip)}`].filter(Boolean).join('&');
+  return ctx.redirect(`/admin/assign${qs ? `?${qs}` : ''}`, 303);
 };

@@ -264,6 +264,11 @@ const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
 
   <!-- STEP 5 -->
   <section class="step" data-step="5" data-name="Review & submit">
+    <div class="card" id="review-card" hidden>
+      <h2 style="margin-top:0">Quick check before you send</h2>
+      <p class="muted small">Here's what you're about to send. Tap <b>Edit</b> to change anything.</p>
+      <div id="review-summary"></div>
+    </div>
     <div class="card">
       <h2>Anything we should know?</h2>
       <label class="fl" for="special_requirements">Special requirements (optional)</label>

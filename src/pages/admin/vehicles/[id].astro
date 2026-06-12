@@ -30,7 +30,10 @@ const STATUSES = ['suggested', 'to_book', 'booked', 'assigned', 'completed', 'ca
 
       <div class="card">
         <p class="muted small" style="margin:0">{humanDate(b.date)} · {b.purpose}{b.depart_time ? ` · ${b.depart_time} IST` : ''}</p>
-        <p style="margin:.3em 0"><b>{people} people</b> / {b.seats} seats {people > b.seats && <span class="chip req">over capacity ⚠</span>}</p>
+        <p style="margin:.3em 0"><b>{people} people</b> / {b.seats} seats</p>
+        {people > b.seats && (
+          <div class="banner warn"><b>⚠ Over capacity</b> — {people} people in a {b.seats}-seat vehicle. Pick a bigger vehicle or detach a family before confirming; the confirm step won't email families on an over-full vehicle.</div>
+        )}
         {b.driver_name && <p class="small">Driver: <b>{b.driver_name}</b>{b.driver_phone_e164 ? ` · ${b.driver_phone_e164}` : ''}{b.vehicle_reg ? ` · ${b.vehicle_reg}` : ''}</p>}
         {!b.driver_name && <a class="btn small btn-primary" href="/admin/assign" style="width:auto">🧑‍✈️ Assign a driver</a>}
       </div>

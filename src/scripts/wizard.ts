@@ -219,9 +219,37 @@ function init(form: HTMLFormElement) {
     return true;
   }
 
+  // ---------- review summary on the last step ----------
+  const reviewCard = $('review-card');
+  const reviewBox = $('review-summary');
+  const esc = (s: string): string => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+  const dmy = (iso: string): string => (/^\d{4}-\d\d-\d\d$/.test(iso) ? iso.split('-').reverse().join('-') : iso);
+  const transportText = (v: string): string => (v === 'no' ? 'own arrangements' : v === 'not_sure' ? 'not sure yet' : 'pickup/drop-off requested');
+  function renderReview() {
+    if (!reviewBox || !reviewCard) return;
+    const name = [val('first'), val('surname')].filter(Boolean).join(' ');
+    const size = val('party_size') || '1';
+    const rows: Array<[string, string, number]> = [
+      ['Contact', `${esc(name)}<br>${esc(val('email'))} · ${esc(val('phone'))}`, 1],
+      ['Group', `${esc(size)} ${Number(size) === 1 ? 'person' : 'people'}`, 2],
+      ['Arrival', `${esc(val('arr_from'))} → ${esc(val('arr_to'))}${val('arr_date') ? ` · ${dmy(val('arr_date'))}` : ''}${val('arr_time') ? ` ${esc(val('arr_time'))}` : ''}<br>${transportText(val('arr_transport'))}`, 3],
+      ['Departure', `${esc(val('dep_from'))} → ${esc(val('dep_to'))}${val('dep_date') ? ` · ${dmy(val('dep_date'))}` : ''}<br>${transportText(val('dep_transport'))}`, 3],
+    ];
+    if (val('int1_from') || val('int1_to')) {
+      rows.push(['Between towns', `${esc(val('int1_from'))} → ${esc(val('int1_to'))}${val('int1_date') ? ` · ${dmy(val('int1_date'))}` : ''}`, 4]);
+    }
+    reviewBox.innerHTML = rows.map(([label, body, step]) =>
+      `<div class="sum"><div class="top"><h3>${label}</h3><button type="button" class="btn small btn-ghost" data-goto="${step}" style="width:auto">Edit</button></div><div class="small" style="margin-top:6px">${body}</div></div>`,
+    ).join('');
+    reviewBox.querySelectorAll<HTMLElement>('[data-goto]').forEach((b) =>
+      b.addEventListener('click', () => show(Number(b.dataset.goto))));
+    reviewCard.hidden = false;
+  }
+
   function show(n: number) {
     cur = Math.min(Math.max(n, 1), total);
     steps.forEach((s) => { s.hidden = Number(s.dataset.step) !== cur; });
+    if (cur === total) renderReview();
     if (progress) progress.hidden = false;
     if (fill) fill.style.width = `${(cur / total) * 100}%`;
     if (stepnum) stepnum.textContent = `Step ${cur} of ${total}`;

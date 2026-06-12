@@ -8,6 +8,7 @@ import type { Registration, TransportLeg, VehicleBooking } from './types';
 import { store } from './store';
 import { config } from './config';
 import { normalizePhone } from './phone';
+import { humanDate } from './dates';
 import { sendEmail, eventInfo } from './email';
 import { confirmationEmail } from './email-templates';
 import { allTransportLegsConfirmed, isPlannable, makeCluster, vehicleLabel, type Cluster } from './planner';
@@ -123,7 +124,7 @@ export async function assignDriver(
 
 /** The cost-free family-facing detail for one booking (used by the preview + the WhatsApp twin). */
 export function bookingFamilyMessage(booking: VehicleBooking, familyFirst: string): string {
-  const when = booking.date;
+  const when = humanDate(booking.date) || booking.date;
   const verb = booking.purpose === 'departure'
     ? `Your car will leave ${booking.route_from} at ${booking.depart_time ?? ''} IST`
     : `You'll be picked up around ${booking.depart_time ?? ''} IST`;
@@ -148,7 +149,7 @@ export function whatsappLink(phoneE164: string | null, message: string): string 
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
-export interface ConfirmResult { emailed: number; families: string[] }
+export interface ConfirmResult { emailed: number; failed: number; families: string[] }
 
 /**
  * Confirm a booking: mark its covered legs confirmed, copy pickup/driver onto them, auto-confirm any
@@ -157,13 +158,15 @@ export interface ConfirmResult { emailed: number; families: string[] }
  */
 export async function confirmBooking(bookingId: string, now: string): Promise<ConfirmResult> {
   const booking = await store.getBooking(bookingId);
-  if (!booking) return { emailed: 0, families: [] };
+  if (!booking) return { emailed: 0, failed: 0, families: [] };
 
   const findUrl = `${config.appBaseUrl.replace(/\/+$/, '')}/find`;
   const byRef = new Map<string, Set<string>>();
   for (const c of booking.covered_legs) (byRef.get(c.registration_ref) ?? byRef.set(c.registration_ref, new Set()).get(c.registration_ref)!).add(c.leg_id);
 
   const families: string[] = [];
+  let emailed = 0;
+  let failed = 0;
   for (const [ref, legIds] of byRef) {
     const reg = await store.getRegistration(ref);
     if (!reg) continue;
@@ -183,12 +186,13 @@ export async function confirmBooking(bookingId: string, now: string): Promise<Co
     const content = confirmationEmail(reg, findUrl, eventInfo());
     const sent = await sendEmail(reg, 'confirmation', content, now);
     await store.putRegistration(sent.doc);
+    if (sent.sent) emailed++; else failed++;
     families.push(reg.main_contact_surname || reg.main_contact_first || ref);
   }
 
   booking.updated_at = now;
   await store.putBooking(booking);
-  return { emailed: families.length, families };
+  return { emailed, failed, families };
 }
 
 /** Detach one leg from a booking (back to unbooked/requested). */

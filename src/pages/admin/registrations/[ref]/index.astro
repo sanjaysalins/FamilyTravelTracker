@@ -5,6 +5,7 @@ import { CSRF_COOKIE, issueCsrf } from '../../../../lib/csrf';
 import { requireSession } from '../../../../lib/auth';
 import { store } from '../../../../lib/store';
 import { humanDate } from '../../../../lib/dates';
+import { whatsappLink } from '../../../../lib/vehicles';
 import type { TransportLeg } from '../../../../lib/types';
 
 if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
@@ -17,7 +18,10 @@ Astro.cookies.set(CSRF_COOKIE, csrf, {
   path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200,
 });
 
-const waDigits = doc ? (doc.whatsapp_e164 || doc.phone_e164 || '').replace(/[^0-9]/g, '') : '';
+const waMsg = doc
+  ? `Hello ${doc.main_contact_first || 'there'}, this is ${config.event.organiserName || 'the organiser'} about your travel for ${config.event.birthdayName}'s ${config.event.birthdayAge}th in ${config.event.town}.`
+  : '';
+const waUrl = doc ? whatsappLink(doc.whatsapp_e164 || doc.phone_e164, waMsg) : null;
 
 function legWhen(l: TransportLeg): string {
   if (l.date_tbc || !l.travel_date) return 'date not booked';
@@ -46,8 +50,8 @@ const statusChip: Record<string, string> = { submitted: 'warn', in_review: 'plan
       <div class="topbar">
         <a class="btn small btn-ghost" href="/admin/registrations">← All</a>
         <span style="font-weight:700">{[doc.main_contact_surname, doc.main_contact_first].filter(Boolean).join(', ')} · {ref.split('-').pop()}</span>
-        {waDigits
-          ? <a class="btn small btn-ghost" href={`https://wa.me/${waDigits}`} target="_blank" rel="noopener">💬 WhatsApp</a>
+        {waUrl
+          ? <a class="btn small btn-ghost" href={waUrl} target="_blank" rel="noopener">💬 WhatsApp</a>
           : <span class="muted small">no number</span>}
       </div>
 
