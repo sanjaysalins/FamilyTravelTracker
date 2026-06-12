@@ -4,9 +4,12 @@ import { config } from '../../lib/config';
 import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
 import { requireSession } from '../../lib/auth';
 import { loadJobs } from '../../lib/tasks';
+import { isRetentionDue } from '../../lib/privacy';
 
 // Route guard: every /admin/* page re-checks the session (and slides the idle window).
-if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+const now = new Date();
+if (!requireSession(Astro.cookies, now)) return Astro.redirect('/admin/login');
+const retentionDue = isRetentionDue(config.event.end, config.retentionDays, now);
 
 const csrf = issueCsrf();
 Astro.cookies.set(CSRF_COOKIE, csrf, {
@@ -28,6 +31,10 @@ const { birthdayName, birthdayAge, town } = config.event;
     </div>
     <p>One thing at a time. Tap a job to work through it.</p>
   </div>
+
+  {retentionDue && (
+    <div class="banner warn">🗑 The event finished more than {config.retentionDays} days ago. Consider deleting all family data in <a href="/admin/settings">Settings</a> (privacy/retention).</div>
+  )}
 
   <div class="tasklist">
     {jobs.map((job) => (

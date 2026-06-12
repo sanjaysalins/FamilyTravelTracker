@@ -31,6 +31,7 @@ export const config = {
   timezone: optional('DEFAULT_TIMEZONE', 'Asia/Kolkata'),
   phoneRegion: optional('DEFAULT_PHONE_REGION', 'IN'),
   editTokenExpiryDays: Number(optional('EDIT_TOKEN_EXPIRY_DAYS', '30')),
+  retentionDays: Number(optional('RETENTION_DAYS', '60')), // delete-all reminder after event + N days
 
   event: {
     town: optional('EVENT_TOWN', 'Bidar'),

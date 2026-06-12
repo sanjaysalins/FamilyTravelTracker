@@ -109,6 +109,27 @@ const statusChip: Record<string, string> = { submitted: 'warn', in_review: 'plan
         <a class="btn btn-ghost" href="/admin/confirm" style="margin-top:10px">✉️ Confirm-&-email flow</a>
       </div>
 
+      <!-- Danger zone -->
+      <div class="card">
+        <h2 style="margin-top:0">Danger zone</h2>
+        <div class="btn-row">
+          {doc.status !== 'cancelled' && (
+            <form method="POST" action="/api/admin/delete-registration" style="flex:1" onsubmit="return confirm('Mark this family as cancelled / not attending?')">
+              <input type="hidden" name="csrf_token" value={csrf} />
+              <input type="hidden" name="ref" value={ref} />
+              <input type="hidden" name="action" value="cancel" />
+              <button type="submit" class="btn btn-ghost">Cancel registration</button>
+            </form>
+          )}
+          <form method="POST" action="/api/admin/delete-registration" style="flex:1" onsubmit="return confirm('Permanently DELETE this family and all their data? This cannot be undone.')">
+            <input type="hidden" name="csrf_token" value={csrf} />
+            <input type="hidden" name="ref" value={ref} />
+            <input type="hidden" name="action" value="delete" />
+            <button type="submit" class="btn btn-ghost" style="color:var(--danger)">Delete all data</button>
+          </form>
+        </div>
+      </div>
+
       <!-- Audit trail -->
       <div class="card">
         <h2 style="margin-top:0">History</h2>

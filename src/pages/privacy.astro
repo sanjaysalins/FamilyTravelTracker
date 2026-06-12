@@ -1,0 +1,46 @@
+---
+import Base from '../layouts/Base.astro';
+import { config } from '../lib/config';
+const e = config.event;
+const contact = e.organiserName || 'the event organiser';
+---
+<Base title="Privacy notice">
+  <div class="hero">
+    <div class="kicker">{e.birthdayName}'s {e.birthdayAge}th · {e.town}</div>
+    <h1>Privacy notice</h1>
+    <p>How your travel details are used for this family event.</p>
+  </div>
+
+  <div class="card">
+    <p class="muted small">Plain-English summary — please review the exact wording before go-live (DPDP/GDPR).</p>
+
+    <h2>Why we collect this</h2>
+    <p>So the organiser can arrange local transport (pickups and drop-offs) for family members
+    travelling to {e.birthdayName}'s {e.birthdayAge}th in {e.town}. <b>There is no cost to you</b> —
+    this is an invitation, not a paid service.</p>
+
+    <h2>What we collect</h2>
+    <p>Your name, contact details (email, phone, WhatsApp), the number of people in your group, your
+    travel legs (dates, times, flight/train details, from/to), where you're staying, and any special
+    requirements you choose to share. We do <b>not</b> ask for or store payment information.</p>
+
+    <h2>Who can see it</h2>
+    <p>Only the event organiser. A driver assigned to your pickup is given your name, phone, pickup
+    point and time — never your health/mobility notes, and never any cost information.</p>
+
+    <h2>Where it's stored</h2>
+    <p>On Netlify's hosting platform (Netlify Blobs), whose servers may be located in the
+    <b>United States</b>. Access is restricted to the organiser by password.</p>
+
+    <h2>How long we keep it</h2>
+    <p>Your details are kept for the event and deleted within about {config.retentionDays} days
+    afterwards. Deleting your registration removes all of it — including the change history.</p>
+
+    <h2>Your choices</h2>
+    <p>You can change or review your details any time using your private edit link (or
+    <a href="/find">Find my registration</a>). To correct, cancel, or delete your registration,
+    use your edit link or contact {contact}.</p>
+
+    <a class="btn btn-ghost" href="/" style="margin-top:12px">← Back to home</a>
+  </div>
+</Base>
