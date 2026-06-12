@@ -2,17 +2,19 @@
 
 **Last worked:** 2026-06-12 (Phases 0–6 + Phase 7 build-parts + a full UAT fix round A–F). **LIVE on Netlify**
 
-**UAT round (2026-06-12):** ran a 17-agent multi-persona UAT (live family site + local admin) → 106
-issues (1 blocker, 29 high). Fixed in 6 commits (A–F, see `UAT-FINDINGS.md`): dead "Need help?" FAB
-(now WhatsApp/mailto/hidden, never `#`); "you never pay" on landing + transport step; privacy draft
-note + jargon removed, contact added; wizard 5-step framing + plainer wording + review-summary on step
-5; admin status-dropdown data bug + "ready to book" count fixed; skip-vs-done; over-capacity now blocks
-confirm; post-send "Emailed ✓" banner; real progress bars; forward-safe run sheet (no guest_notes,
-per-day grouping). **112 tests; build clean; live-verified.** These 6 UAT commits are **NOT pushed**. at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
+**UAT round (2026-06-12) — DONE, PUSHED, LIVE:** ran a 17-agent multi-persona UAT (live family site +
+local admin) → 106 issues (1 blocker, 29 high). Fixed in 6 commits (A–F, see `UAT-FINDINGS.md`): dead
+"Need help?" FAB (now WhatsApp/mailto/hidden, never `#`); "you never pay" on landing + transport step;
+privacy draft note + jargon removed, contact added; wizard 5-step framing + plainer wording +
+review-summary on step 5; admin status-dropdown data bug + "ready to book" count fixed; skip-vs-done;
+over-capacity now blocks confirm; post-send "Emailed ✓" banner; real progress bars; forward-safe run
+sheet (no guest_notes, per-day grouping). **112 tests; build clean.** Pushed (`7dc14d6..b4be53e`) and
+**deploy verified GREEN** on https://bidarplan.netlify.app (cost line, "5 short pages", "How are you
+travelling?", privacy link all confirmed live). **Everything is committed + pushed — `main` is in sync.** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
 
 **▶ PICK UP HERE:** Phases **0 → 6 are DONE** plus **Phase 7's build-parts** (guest register + edit +
 email + full guided admin + reports/CSV + privacy/delete/retention; **112 tests** pass; `npm run build`
-clean). Commits `7bb4f96 → 0724a65` are **NOT pushed** (a push deploys to prod — needs your OK).
+clean) **plus a full UAT fix round (A–F)** — all committed, **pushed, and live (deploy verified green)**.
 **NEXT = finish Phase 7 (verify + restore-tested backup), then Phase 8 (cutover) + Phase 9 (dry run).**
 Phase 6 = `reports.ts` (arrivals/departures, seat-demand=sum people, run sheet, chase, headcount) +
 Excel-safe CSV (BOM/DD-MM-YYYY/+phones, no tokens/health) at `/admin/reports` + CSV endpoints. Phase 7
@@ -28,7 +30,9 @@ email log and settings (JSON export + delete-all). Reports hub is a placeholder 
 **Resend is now WORKING** locally (real ack + confirmation emails verified to the test inbox).
 Still open for the **user, in Netlify env** (local `.env` already has placeholders): set the real
 `EMAIL_FROM` (currently the `onboarding@resend.dev` test sender — only reaches the signup address),
-`RESEND_API_KEY`, `TEST_EMAIL_RECIPIENT`, `APP_BASE_URL`, `ORGANISER_NAME`, `ORGANISER_WHATSAPP_E164`.
+`RESEND_API_KEY`, `TEST_EMAIL_RECIPIENT`, `APP_BASE_URL`, `ORGANISER_NAME`. **NOW ALSO IMPORTANT after
+the UAT fix:** `ORGANISER_WHATSAPP_E164` and `ORGANISER_EMAIL` — the "Need help?" button + the contact
+fallbacks only appear when one of these is set (otherwise hidden, never a dead `#`). Then redeploy.
 Admin login password lives in local `.env` (gitignored).
 
 **Live admin token (temporary):** the `/api/admin/data` endpoint is guarded by `SESSION_SECRET`
