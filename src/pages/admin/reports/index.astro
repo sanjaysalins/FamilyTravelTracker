@@ -1,0 +1,25 @@
+---
+import Base from '../../../layouts/Base.astro';
+import NeedsYou from '../../../components/NeedsYou.astro';
+import { requireSession } from '../../../lib/auth';
+import { store } from '../../../lib/store';
+import { computeJobs } from '../../../lib/tasks';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+const [regs, bookings] = await Promise.all([store.listRegistrations(), store.listBookings()]);
+const jobs = computeJobs(regs, bookings);
+---
+<Base title="Reports" wide help={false}>
+  <div class="topbar">
+    <a class="btn small btn-ghost" href="/admin">← What needs you</a>
+    <h1 style="margin:0; font-size:1.25rem">Reports &amp; driver plan</h1>
+    <span></span>
+  </div>
+  <NeedsYou jobs={jobs} />
+  <div class="card">
+    <p>The run-the-event reports — arrivals/departures schedules, seat demand, per-driver run sheet,
+    hire list, chase list and Excel-safe CSV export — arrive in <b>Phase 6</b>.</p>
+    <p class="muted small">For now, use <a href="/admin/registrations">All registrations</a> and
+    <a href="/admin/vehicles">Vehicles &amp; bookings</a>.</p>
+  </div>
+</Base>

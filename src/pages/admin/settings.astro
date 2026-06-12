@@ -1,0 +1,63 @@
+---
+import Base from '../../layouts/Base.astro';
+import { config } from '../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
+import { requireSession } from '../../lib/auth';
+import { store } from '../../lib/store';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+let flash = '';
+const f = Astro.cookies.get('ftc_admin_flash')?.value;
+if (f) { flash = f; Astro.cookies.delete('ftc_admin_flash', { path: '/' }); }
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
+
+const counts = { regs: (await store.listRegistrations()).length, bookings: (await store.listBookings()).length };
+const e = config.event;
+const emailMode = config.testEmailRecipient
+  ? `Test mode — all mail goes to ${config.testEmailRecipient}`
+  : config.resendApiKey ? 'Live — mail goes to each family' : 'Email not configured (RESEND_API_KEY missing)';
+const rows: Array<[string, string]> = [
+  ['Birthday', `${e.birthdayName}'s ${e.birthdayAge}th`],
+  ['Town / hub', `${e.town} · via ${e.hub}`],
+  ['Dates', `${e.start} → ${e.end}`],
+  ['Organiser', e.organiserName || '(not set)'],
+  ['Organiser WhatsApp', e.organiserWhatsapp || '(not set)'],
+  ['Site URL', config.appBaseUrl],
+  ['Email from', config.emailFrom],
+  ['Email mode', emailMode],
+];
+---
+<Base title="Settings" help={false}>
+  <div class="topbar">
+    <a class="btn small btn-ghost" href="/admin">← What needs you</a>
+    <h1 style="margin:0; font-size:1.25rem">Settings</h1>
+    <span></span>
+  </div>
+
+  {flash && <div class="banner ok">{flash}</div>}
+
+  <div class="card">
+    <h2 style="margin-top:0">Event details</h2>
+    <p class="muted small">These come from the environment variables (set them in Netlify). Shown here so you can check them.</p>
+    <div class="sum"><dl>
+      {rows.map(([k, v]) => (<><dt>{k}</dt><dd>{v}</dd></>))}
+    </dl></div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Backup</h2>
+    <p class="small muted">{counts.regs} families · {counts.bookings} bookings.</p>
+    <a class="btn btn-primary" href="/api/admin/export">⬇ Export all data (JSON backup)</a>
+  </div>
+
+  <form class="card" method="POST" action="/api/admin/reset" onsubmit="return confirm('Delete ALL registrations and bookings? A one-step backup is saved first.')">
+    <h2 style="margin-top:0">Delete all data</h2>
+    <p class="small muted">For after the event. A <code>_before_delete_all</code> snapshot is saved first so it can be undone.</p>
+    <input type="hidden" name="csrf_token" value={csrf} />
+    <label class="choice"><input type="checkbox" name="confirm" value="yes" required /> <b>Yes, delete all family data</b></label>
+    <button type="submit" class="btn btn-ghost" style="color:var(--danger); margin-top:12px">Delete all</button>
+  </form>
+</Base>

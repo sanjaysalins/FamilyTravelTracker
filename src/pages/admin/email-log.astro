@@ -1,0 +1,47 @@
+---
+import Base from '../../layouts/Base.astro';
+import NeedsYou from '../../components/NeedsYou.astro';
+import { requireSession } from '../../lib/auth';
+import { store } from '../../lib/store';
+import { computeJobs } from '../../lib/tasks';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+const [regs, bookings] = await Promise.all([store.listRegistrations(), store.listBookings()]);
+const jobs = computeJobs(regs, bookings);
+
+const rows = regs
+  .flatMap((r) => r.emails.map((e) => ({ ...e, ref: r.reference_number, family: [r.main_contact_surname, r.main_contact_first].filter(Boolean).join(', ') })))
+  .sort((a, b) => b.at.localeCompare(a.at));
+
+const sent = rows.filter((r) => r.status === 'sent').length;
+const failed = rows.filter((r) => r.status === 'failed').length;
+---
+<Base title="Email log" wide help={false}>
+  <div class="topbar">
+    <a class="btn small btn-ghost" href="/admin">← What needs you</a>
+    <h1 style="margin:0; font-size:1.25rem">Email log</h1>
+    <span class="muted small">{sent} sent · {failed} failed</span>
+  </div>
+
+  <NeedsYou jobs={jobs} />
+
+  {rows.length === 0 && <div class="card"><p class="muted">No emails sent yet.</p></div>}
+  {rows.length > 0 && (
+    <table class="table">
+      <thead><tr><th>When</th><th>Family</th><th>Type</th><th>To</th><th>Status</th><th>Detail</th></tr></thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr>
+            <td class="small">{r.at.slice(0, 16).replace('T', ' ')}</td>
+            <td><a href={`/admin/registrations/${r.ref}`}>{r.family || r.ref.split('-').pop()}</a></td>
+            <td>{r.type}</td>
+            <td class="small">{r.to_email}</td>
+            <td><span class={`chip ${r.status === 'sent' ? 'ok' : 'req'}`}>{r.status}</span></td>
+            <td class="small muted">{r.status === 'failed' ? r.error_message : r.subject}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</Base>
