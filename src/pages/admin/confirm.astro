@@ -1,0 +1,76 @@
+---
+import Base from '../../layouts/Base.astro';
+import { config } from '../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
+import { requireSession } from '../../lib/auth';
+import { store } from '../../lib/store';
+import { confirmableBookings, bookingFamilyMessage, whatsappLink } from '../../lib/vehicles';
+import { vehicleLabel } from '../../lib/planner';
+import { humanDate } from '../../lib/dates';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+const [bookings, regs] = await Promise.all([store.listBookings(), store.listRegistrations()]);
+const byRef = new Map(regs.map((r) => [r.reference_number, r]));
+const skip = new Set((Astro.url.searchParams.get('skip') ?? '').split(',').filter(Boolean));
+const skipParam = [...skip].join(',');
+const queue = confirmableBookings(bookings, regs).filter((b) => !skip.has(b.id));
+const current = queue[0];
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
+
+// One cost-free preview + WhatsApp link per covered family.
+const previews = current
+  ? [...new Set(current.covered_legs.map((c) => c.registration_ref))].map((ref) => {
+      const reg = byRef.get(ref);
+      const first = reg?.main_contact_first ?? '';
+      const msg = bookingFamilyMessage(current, first);
+      return { ref, name: reg ? `${reg.main_contact_first} ${reg.main_contact_surname}`.trim() : ref, msg, wa: whatsappLink(reg?.whatsapp_e164 ?? reg?.phone_e164 ?? null, msg) };
+    })
+  : [];
+---
+<Base title="Confirm & email" help={false}>
+  <div class="jobcard">
+    <div class="progress">
+      <div class="steplabel"><span>Confirm &amp; email</span><span>{queue.length ? `${queue.length} to go` : 'Done'}</span></div>
+      <div class="bar"><div class="fill" style={`width:${queue.length ? 8 : 100}%`}></div></div>
+    </div>
+
+    {!current && (
+      <div class="card center">
+        <div style="font-size:3rem">🎉</div>
+        <h1>Families told</h1>
+        <p class="muted">Every booking with a driver has been confirmed.</p>
+        <a class="btn btn-ghost" href="/admin">Back to What needs you</a>
+      </div>
+    )}
+
+    {current && (
+      <div class="card">
+        <p class="ts muted" style="margin:0">{humanDate(current.date)} · {current.id.split('-').pop()}</p>
+        <p class="jobbig">{current.route_from} → {current.route_to}</p>
+        <p class="small muted" style="margin:0 0 8px">{vehicleLabel(current.vehicle_type)}{current.driver_name ? ` · driver ${current.driver_name}` : ''}</p>
+
+        {previews.map((p) => (
+          <div class="banner ok" style="text-align:left">
+            <b>To {p.name}</b> — this is what they'll receive:
+            <pre style="white-space:pre-wrap; font-family:inherit; background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-top:8px; font-size:.88rem">{p.msg}</pre>
+            {p.wa && <a class="btn small btn-ghost" href={p.wa} target="_blank" rel="noopener" style="width:auto; margin-top:6px">💬 Send on WhatsApp instead</a>}
+          </div>
+        ))}
+        <p class="hint">🔒 No cost, operator or budget is included.</p>
+
+        <form method="POST" action="/api/admin/confirm">
+          <input type="hidden" name="csrf_token" value={csrf} />
+          <input type="hidden" name="id" value={current.id} />
+          <input type="hidden" name="skip" value={skipParam} />
+          <div class="btn-row" style="margin-top:6px">
+            <a class="btn btn-ghost" href={`/admin/confirm?skip=${[skipParam, current.id].filter(Boolean).join(',')}`}>Skip</a>
+            <button type="submit" class="btn btn-primary">Send email &amp; next →</button>
+          </div>
+        </form>
+      </div>
+    )}
+  </div>
+</Base>

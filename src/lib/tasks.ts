@@ -40,7 +40,13 @@ export function computeJobs(regs: Registration[], bookings: VehicleBooking[]): J
   const toReview = regs.filter((r) => r.status === 'submitted').length;
   const toBook = bookings.filter((b) => b.status === 'suggested').length;
   const needDriver = bookings.filter((b) => b.status !== 'cancelled' && !b.driver_name).length;
-  const toConfirm = bookings.filter((b) => b.status === 'assigned' && !!b.driver_name).length;
+  // "to confirm" = an assigned booking with a driver whose families aren't all emailed yet (some
+  // covered leg isn't `confirmed`), so the count drops once a booking's confirmations are sent.
+  const legStatus = new Map<string, string>();
+  for (const r of regs) for (const l of r.legs) legStatus.set(l.id, l.status);
+  const toConfirm = bookings.filter((b) =>
+    b.status === 'assigned' && !!b.driver_name && b.covered_legs.some((c) => legStatus.get(c.leg_id) !== 'confirmed'),
+  ).length;
   const toChase = chaseLegs(regs).length;
 
   return [

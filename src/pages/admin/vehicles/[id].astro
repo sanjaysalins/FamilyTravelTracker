@@ -1,0 +1,98 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { config } from '../../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../../lib/csrf';
+import { requireSession } from '../../../lib/auth';
+import { store } from '../../../lib/store';
+import { VEHICLES, vehicleLabel } from '../../../lib/planner';
+import { humanDate } from '../../../lib/dates';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+const id = Astro.params.id ?? '';
+const b = await store.getBooking(id);
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
+
+const people = b ? b.covered_legs.reduce((s, c) => s + c.people, 0) : 0;
+const STATUSES = ['to_book', 'booked', 'assigned', 'completed', 'cancelled'];
+---
+<Base title="Booking · admin" help={false}>
+  {!b && <div class="card"><p>No booking found for <b>{id}</b>. <a href="/admin/vehicles">Back to vehicles</a>.</p></div>}
+  {b && (
+    <>
+      <div class="topbar">
+        <a class="btn small btn-ghost" href="/admin/vehicles">← Vehicles</a>
+        <h1 style="margin:0; font-size:1.2rem">{b.id.split('-').pop()} · {b.route_from} → {b.route_to}</h1>
+        <span></span>
+      </div>
+
+      <div class="card">
+        <p class="muted small" style="margin:0">{humanDate(b.date)} · {b.purpose}{b.depart_time ? ` · ${b.depart_time} IST` : ''}</p>
+        <p style="margin:.3em 0"><b>{people} people</b> / {b.seats} seats {people > b.seats && <span class="chip req">over capacity ⚠</span>}</p>
+        {b.driver_name && <p class="small">Driver: <b>{b.driver_name}</b>{b.driver_phone_e164 ? ` · ${b.driver_phone_e164}` : ''}{b.vehicle_reg ? ` · ${b.vehicle_reg}` : ''}</p>}
+        {!b.driver_name && <a class="btn small btn-primary" href="/admin/assign" style="width:auto">🧑‍✈️ Assign a driver</a>}
+      </div>
+
+      <div class="card">
+        <h2 style="margin-top:0">Families on this vehicle</h2>
+        {b.covered_legs.length === 0 && <p class="muted">No legs attached.</p>}
+        {b.covered_legs.map((c) => (
+          <div class="legcard">
+            <div class="lh"><b>{c.family_name}</b> <span class="chip plan">{c.people} ppl</span></div>
+            <div style="display:flex; gap:8px; align-items:center; margin-top:6px">
+              <a class="small" href={`/admin/registrations/${c.registration_ref}`}>{c.registration_ref}</a>
+              <form method="POST" action="/api/admin/vehicles/detach" style="margin-left:auto">
+                <input type="hidden" name="csrf_token" value={csrf} />
+                <input type="hidden" name="id" value={b.id} />
+                <input type="hidden" name="leg_id" value={c.leg_id} />
+                <button type="submit" class="btn small btn-ghost" style="width:auto">Detach</button>
+              </form>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <form class="card" method="POST" action="/api/admin/vehicles/update">
+        <h2 style="margin-top:0">Vehicle &amp; hire <span class="muted small">(organiser-only — never shown to families)</span></h2>
+        <input type="hidden" name="csrf_token" value={csrf} />
+        <input type="hidden" name="id" value={b.id} />
+
+        <label class="fl" for="vt">Vehicle type</label>
+        <select id="vt" name="vehicle_type">
+          {VEHICLES.map((v) => <option value={v.type} selected={v.type === b.vehicle_type}>{v.label} ({v.seats})</option>)}
+          <option value="other" selected={b.vehicle_type === 'other'}>Other</option>
+        </select>
+
+        <label class="fl" for="seats">Seats</label>
+        <input id="seats" name="seats" type="number" min="1" value={b.seats} />
+
+        <label class="fl" for="op">Operator / vendor</label>
+        <input id="op" name="operator_name" type="text" value={b.operator_name ?? ''} placeholder="hire company" />
+
+        <label class="fl" for="opc">Operator contact</label>
+        <input id="opc" name="operator_contact" type="text" value={b.operator_contact ?? ''} />
+
+        <label class="fl" for="q">Quote amount (₹)</label>
+        <input id="q" name="quote_amount" type="number" min="0" value={b.quote_amount ?? ''} placeholder="internal budgeting only" />
+
+        <label class="fl" for="st">Status</label>
+        <select id="st" name="status">
+          {STATUSES.map((s) => <option value={s} selected={s === b.status}>{s.replace('_', ' ')}</option>)}
+        </select>
+
+        <label class="fl" for="nt">Notes</label>
+        <textarea id="nt" name="notes">{b.notes ?? ''}</textarea>
+
+        <button type="submit" class="btn btn-primary" style="margin-top:14px">Save booking</button>
+      </form>
+
+      <form class="card" method="POST" action="/api/admin/vehicles/delete" onsubmit="return confirm('Delete this booking and release its legs?')">
+        <input type="hidden" name="csrf_token" value={csrf} />
+        <input type="hidden" name="id" value={b.id} />
+        <button type="submit" class="btn btn-ghost" style="color:var(--danger)">Delete booking</button>
+      </form>
+    </>
+  )}
+</Base>

@@ -1,0 +1,79 @@
+---
+import Base from '../../../layouts/Base.astro';
+import NeedsYou from '../../../components/NeedsYou.astro';
+import { config } from '../../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../../lib/csrf';
+import { requireSession } from '../../../lib/auth';
+import { store } from '../../../lib/store';
+import { computeJobs } from '../../../lib/tasks';
+import { suggestClusters, vehicleLabel } from '../../../lib/planner';
+import { humanDate } from '../../../lib/dates';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+const [regs, bookings] = await Promise.all([store.listRegistrations(), store.listBookings()]);
+const jobs = computeJobs(regs, bookings);
+const suggestions = suggestClusters(regs);
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
+
+const statusChip: Record<string, string> = {
+  suggested: 'gold', to_book: 'warn', booked: 'plan', assigned: 'plan', completed: 'ok', cancelled: 'req',
+};
+const sorted = [...bookings].sort((a, b) => (a.date + (a.depart_time ?? '')).localeCompare(b.date + (b.depart_time ?? '')));
+---
+<Base title="Vehicles & bookings" wide help={false}>
+  <div class="topbar">
+    <a class="btn small btn-ghost" href="/admin">← What needs you</a>
+    <h1 style="margin:0; font-size:1.25rem">Vehicles &amp; bookings</h1>
+    <span></span>
+  </div>
+
+  <NeedsYou jobs={jobs} />
+
+  <h2>Suggested pickups ({suggestions.length})</h2>
+  <p class="muted small">Families travelling the same route within an hour, grouped into one vehicle. Accept to create a booking.</p>
+  {suggestions.length === 0 && <div class="card"><p class="muted">No new suggestions — every transport leg with a date is either booked or needs a date first.</p></div>}
+  {suggestions.map((c) => (
+    <div class="cluster">
+      <div class="lh" style="display:flex; justify-content:space-between; gap:8px">
+        <b>{c.from} → {c.to}</b>
+        <span class="chip gold">{vehicleLabel(c.vehicle_type)} · {c.seats} seats</span>
+      </div>
+      <p class="small muted" style="margin:.3em 0">
+        {humanDate(c.date)} · {c.direction === 'departure' ? `leave by ${c.depart}` : `around ${c.depart}`} IST · <b>{c.people} people</b>
+      </p>
+      <p class="small" style="margin:.2em 0">{c.legs.map((l) => `${l.family_name} (${l.people})`).join(' · ')}</p>
+      <form method="POST" action="/api/admin/vehicles/create">
+        <input type="hidden" name="csrf_token" value={csrf} />
+        <input type="hidden" name="leg_ids" value={c.legs.map((l) => l.leg_id).join(',')} />
+        <button type="submit" class="btn small btn-primary" style="width:auto">✓ Create this booking</button>
+      </form>
+    </div>
+  ))}
+
+  <h2 style="margin-top:24px">Bookings ({bookings.length})</h2>
+  {bookings.length === 0 && <div class="card"><p class="muted">No bookings yet.</p></div>}
+  {sorted.length > 0 && (
+    <table class="table">
+      <thead><tr><th>Ref</th><th>Route</th><th>When</th><th>People / seats</th><th>Driver</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {sorted.map((b) => {
+          const people = b.covered_legs.reduce((s, c) => s + c.people, 0);
+          return (
+            <tr>
+              <td>{b.id.split('-').pop()}</td>
+              <td>{b.route_from} → {b.route_to}</td>
+              <td>{humanDate(b.date)}{b.depart_time ? ` · ${b.depart_time}` : ''}</td>
+              <td>{people} / {b.seats}{people > b.seats ? ' ⚠' : ''}</td>
+              <td>{b.driver_name ?? <span class="muted">—</span>}</td>
+              <td><span class={`chip ${statusChip[b.status] ?? 'plan'}`}>{b.status.replace('_', ' ')}</span></td>
+              <td><a class="btn small btn-primary" href={`/admin/vehicles/${b.id}`}>Open</a></td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  )}
+</Base>

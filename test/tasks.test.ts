@@ -63,7 +63,7 @@ describe('computeJobs', () => {
     const bookings = [
       booking({ id: 'V1', status: 'suggested' }),                                   // to-book + needs driver
       booking({ id: 'V2', status: 'booked', driver_name: null }),                   // needs driver
-      booking({ id: 'V3', status: 'assigned', driver_name: 'Ravi' }),               // to-confirm
+      booking({ id: 'V3', status: 'assigned', driver_name: 'Ravi', covered_legs: [{ registration_ref: 'R1', leg_id: 'L1', family_name: 'X', people: 2 }] }), // to-confirm (leg not confirmed)
       booking({ id: 'V4', status: 'cancelled', driver_name: null }),                // ignored
     ];
     const jobs = computeJobs([], bookings);
@@ -83,7 +83,10 @@ describe('computeJobs', () => {
 
 describe('needsYouItems', () => {
   it('returns only outstanding jobs with friendly labels', () => {
-    const jobs = computeJobs([Object.assign(reg(), { status: 'submitted' })], [booking({ status: 'assigned', driver_name: 'R' })]);
+    const jobs = computeJobs(
+      [Object.assign(reg(), { status: 'submitted' })],
+      [booking({ status: 'assigned', driver_name: 'R', covered_legs: [{ registration_ref: 'R1', leg_id: 'L1', family_name: 'X', people: 2 }] })],
+    );
     const items = needsYouItems(jobs);
     expect(items.some((i) => i.label === 'to review' && i.n === 1)).toBe(true);
     expect(items.some((i) => i.label === 'to confirm' && i.n === 1)).toBe(true);

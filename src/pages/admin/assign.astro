@@ -1,0 +1,69 @@
+---
+import Base from '../../layouts/Base.astro';
+import { config } from '../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
+import { requireSession } from '../../lib/auth';
+import { store } from '../../lib/store';
+import { needDriverBookings } from '../../lib/vehicles';
+import { vehicleLabel } from '../../lib/planner';
+import { humanDate } from '../../lib/dates';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+const bookings = await store.listBookings();
+const skip = new Set((Astro.url.searchParams.get('skip') ?? '').split(',').filter(Boolean));
+const skipParam = [...skip].join(',');
+const queue = needDriverBookings(bookings).filter((b) => !skip.has(b.id));
+const current = queue[0];
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
+
+const people = current ? current.covered_legs.reduce((s, c) => s + c.people, 0) : 0;
+const families = current ? current.covered_legs.map((c) => `${c.family_name} (${c.people})`).join(' · ') : '';
+const verb = current ? (current.purpose === 'departure' ? `Leave ${current.route_from} by ${current.depart_time ?? '—'} IST` : `Pickup around ${current.depart_time ?? '—'} IST`) : '';
+---
+<Base title="Assign drivers" help={false}>
+  <div class="jobcard">
+    <div class="progress">
+      <div class="steplabel"><span>Assign a driver</span><span>{queue.length ? `${queue.length} to go` : 'Done'}</span></div>
+      <div class="bar"><div class="fill" style={`width:${queue.length ? 8 : 100}%`}></div></div>
+    </div>
+
+    {!current && (
+      <div class="card center">
+        <div style="font-size:3rem">🎉</div>
+        <h1>All vehicles have a driver</h1>
+        <p class="muted">Next: tell the families.</p>
+        <a class="btn btn-primary" href="/admin/confirm">Confirm &amp; email families →</a>
+        <a class="btn btn-ghost" href="/admin" style="margin-top:10px">Back to What needs you</a>
+      </div>
+    )}
+
+    {current && (
+      <form class="card" method="POST" action="/api/admin/assign">
+        <input type="hidden" name="csrf_token" value={csrf} />
+        <input type="hidden" name="id" value={current.id} />
+        <input type="hidden" name="skip" value={skipParam} />
+
+        <p class="ts muted" style="margin:0">{humanDate(current.date)} · {current.id.split('-').pop()}</p>
+        <p class="jobbig">{current.route_from} → {current.route_to}</p>
+        <p class="small muted" style="margin:0 0 6px">{verb} · {vehicleLabel(current.vehicle_type)} ({current.seats} seats)</p>
+        <div class="banner info small">Carrying: {families} = <b>{people} people</b></div>
+
+        <label class="fl" for="dn">Driver name</label>
+        <input id="dn" name="driver_name" type="text" placeholder="e.g. Suresh" value={current.driver_name ?? ''} />
+        <label class="fl" for="dp">Driver phone</label>
+        <input id="dp" name="driver_phone" type="tel" placeholder="+91 …" value={current.driver_phone_raw ?? ''} />
+        <label class="fl" for="dr">Vehicle reg</label>
+        <input id="dr" name="vehicle_reg" type="text" placeholder="TS09 AB 1234" value={current.vehicle_reg ?? ''} />
+        <p class="hint">🔒 No cost here — that stays on the booking, never shown to the family.</p>
+
+        <div class="btn-row" style="margin-top:10px">
+          <a class="btn btn-ghost" href={`/admin/assign?skip=${[skipParam, current.id].filter(Boolean).join(',')}`}>Skip for now</a>
+          <button type="submit" class="btn btn-primary">Save &amp; next →</button>
+        </div>
+      </form>
+    )}
+  </div>
+</Base>
