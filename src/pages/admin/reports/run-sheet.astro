@@ -1,0 +1,44 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { requireSession } from '../../../lib/auth';
+import { store } from '../../../lib/store';
+import { runSheets } from '../../../lib/reports';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+const [regs, bookings] = await Promise.all([store.listRegistrations(), store.listBookings()]);
+const sheets = runSheets(regs, bookings);
+---
+<Base title="Driver run sheets" help={false}>
+  <div class="topbar no-print">
+    <a class="btn small btn-ghost" href="/admin/reports">← Reports</a>
+    <h1 style="margin:0; font-size:1.2rem">Driver run sheets</h1>
+    <button class="btn small btn-primary" style="width:auto" onclick="window.print()">🖨 Print</button>
+  </div>
+  <p class="muted small no-print">One page per driver. Safe to forward over WhatsApp — no cost, no health notes.</p>
+
+  {sheets.length === 0 && <div class="card"><p class="muted">No drivers assigned yet.</p></div>}
+
+  {sheets.map((s) => (
+    <div class="card sheet">
+      <h2 style="margin-top:0">{s.driver} {s.phone && <span class="muted small">· {s.phone}</span>}</h2>
+      {s.stops.map((stop, i) => (
+        <div class="runstop">
+          <div class="num">{i + 1}</div>
+          <div style="flex:1">
+            <div><span class="t">{stop.time || 'time TBC'}</span> · {stop.pickup}</div>
+            <div class="small">{stop.guest} · {stop.phone} · {stop.people} ppl · {stop.route}{stop.vehicle ? ` · ${stop.vehicle}` : ''}</div>
+            {stop.notes && <div class="small muted">Note: {stop.notes}</div>}
+          </div>
+        </div>
+      ))}
+    </div>
+  ))}
+</Base>
+
+<style>
+  @media print {
+    .no-print { display: none !important; }
+    .sheet { break-after: page; box-shadow: none; border: none; }
+  }
+</style>
