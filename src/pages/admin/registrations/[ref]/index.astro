@@ -1,0 +1,122 @@
+---
+import Base from '../../../../layouts/Base.astro';
+import { config } from '../../../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../../../lib/csrf';
+import { requireSession } from '../../../../lib/auth';
+import { store } from '../../../../lib/store';
+import { humanDate } from '../../../../lib/dates';
+import type { TransportLeg } from '../../../../lib/types';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+const ref = Astro.params.ref ?? '';
+const doc = await store.getRegistration(ref);
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, {
+  path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200,
+});
+
+const waDigits = doc ? (doc.whatsapp_e164 || doc.phone_e164 || '').replace(/[^0-9]/g, '') : '';
+
+function legWhen(l: TransportLeg): string {
+  if (l.date_tbc || !l.travel_date) return 'date not booked';
+  return humanDate(l.travel_date) + (l.travel_time ? ` · ${l.travel_time}` : '');
+}
+function legChip(l: TransportLeg): { cls: string; label: string } {
+  if (!l.transport_needed) return { cls: 'ok', label: 'no transport' };
+  switch (l.status) {
+    case 'confirmed': return { cls: 'ok', label: 'confirmed' };
+    case 'planned': return { cls: 'plan', label: 'driver set, not sent' };
+    case 'needs_clarification': return { cls: 'warn', label: 'awaiting guest' };
+    case 'not_required': return { cls: 'ok', label: 'no transport' };
+    case 'cancelled': return { cls: 'req', label: 'cancelled' };
+    default: return { cls: 'req', label: 'not booked' };
+  }
+}
+const statusChip: Record<string, string> = { submitted: 'warn', in_review: 'plan', confirmed: 'ok', cancelled: 'req' };
+---
+<Base title="Family · admin" help={false}>
+  {!doc && (
+    <div class="card"><p>No registration found for <b>{ref}</b>. <a href="/admin/registrations">Back to all registrations</a>.</p></div>
+  )}
+
+  {doc && (
+    <>
+      <div class="topbar">
+        <a class="btn small btn-ghost" href="/admin/registrations">← All</a>
+        <span style="font-weight:700">{[doc.main_contact_surname, doc.main_contact_first].filter(Boolean).join(', ')} · {ref.split('-').pop()}</span>
+        {waDigits
+          ? <a class="btn small btn-ghost" href={`https://wa.me/${waDigits}`} target="_blank" rel="noopener">💬 WhatsApp</a>
+          : <span class="muted small">no number</span>}
+      </div>
+
+      <div class="topbar" style="margin-top:0">
+        <span class={`chip ${statusChip[doc.status] ?? 'plan'}`}>{doc.status.replace('_', ' ')}</span>
+        {doc.edited_after_confirm && <span class="chip plan">edited after confirm</span>}
+        <a class="btn small btn-gold" href={`/admin/registrations/${ref}/edit`} style="width:auto; margin-left:auto">✏️ Edit details</a>
+      </div>
+
+      <!-- 1 · Review -->
+      <div class="card">
+        <h2 style="margin-top:0">1 · Review</h2>
+        <div class="sum"><dl>
+          <dt>Contact</dt><dd>{doc.main_contact_first} {doc.main_contact_surname}</dd>
+          <dt>Email</dt><dd>{doc.email}</dd>
+          <dt>Phone</dt><dd>{doc.phone_raw}{doc.phone_e164 && doc.phone_e164 !== doc.phone_raw ? ` (${doc.phone_e164})` : ''}</dd>
+          <dt>People</dt><dd>{doc.party_size}</dd>
+          {doc.home_city && <><dt>From</dt><dd>{doc.home_city}, {doc.home_country}</dd></>}
+          {!doc.home_city && <><dt>Country</dt><dd>{doc.home_country}</dd></>}
+          {doc.relationship && <><dt>Relationship</dt><dd>{doc.relationship}</dd></>}
+          {doc.stay_location && <><dt>Staying</dt><dd>{doc.stay_location}</dd></>}
+          {doc.special_requirements && <><dt>Special needs</dt><dd>{doc.special_requirements}</dd></>}
+        </dl></div>
+        {doc.status === 'submitted' ? (
+          <form method="POST" action="/api/admin/review">
+            <input type="hidden" name="csrf_token" value={csrf} />
+            <input type="hidden" name="ref" value={ref} />
+            <button type="submit" class="btn btn-primary">Mark as reviewed</button>
+          </form>
+        ) : (
+          <div class="banner ok">Reviewed — this family is being worked on.</div>
+        )}
+      </div>
+
+      <!-- 2 · Transport -->
+      <div class="card">
+        <h2 style="margin-top:0">2 · Transport</h2>
+        {doc.legs.length === 0 && <p class="muted">No legs.</p>}
+        {doc.legs.map((l) => {
+          const chip = legChip(l);
+          return (
+            <div class="legcard">
+              <div class="lh"><b>{l.direction}</b> <span class={`chip ${chip.cls}`}>{chip.label}</span></div>
+              <p class="small muted" style="margin:0">
+                {l.from_location} → {l.to_location} · {legWhen(l)} · {l.people_on_this_leg} ppl
+                {l.carrier_ref ? ` · ${l.carrier_ref}` : ''}
+                {l.driver_name ? ` · driver ${l.driver_name}` : ''}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      <!-- 3 · Assign / 4 · Confirm (wired in Slice 5.4) -->
+      <div class="card">
+        <h2 style="margin-top:0">3 · Assign &amp; 4 · Confirm</h2>
+        <p class="muted small">Driver assignment and the cost-free confirmation email run through the one-at-a-time flows.</p>
+        <a class="btn btn-ghost" href="/admin/assign">🧑‍✈️ Assign-driver flow</a>
+        <a class="btn btn-ghost" href="/admin/confirm" style="margin-top:10px">✉️ Confirm-&-email flow</a>
+      </div>
+
+      <!-- Audit trail -->
+      <div class="card">
+        <h2 style="margin-top:0">History</h2>
+        {doc.audit.length === 0 && <p class="muted">No history yet.</p>}
+        {doc.audit.slice().reverse().map((a) => (
+          <p class="small" style="margin:.2em 0"><span class="muted">{a.at.slice(0, 16).replace('T', ' ')}</span> · <b>{a.action.replace(/_/g, ' ')}</b>{a.details ? ` — ${a.details}` : ''}</p>
+        ))}
+      </div>
+    </>
+  )}
+</Base>

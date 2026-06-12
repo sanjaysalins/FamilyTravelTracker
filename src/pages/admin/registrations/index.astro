@@ -1,0 +1,77 @@
+---
+import Base from '../../../layouts/Base.astro';
+import NeedsYou from '../../../components/NeedsYou.astro';
+import { requireSession } from '../../../lib/auth';
+import { store } from '../../../lib/store';
+import { computeJobs } from '../../../lib/tasks';
+import { buildRows, filterRows, type ListFilter } from '../../../lib/admin-list';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+const [regs, bookings] = await Promise.all([store.listRegistrations(), store.listBookings()]);
+const jobs = computeJobs(regs, bookings);
+
+const q = Astro.url.searchParams.get('q') ?? '';
+const filterParam = (Astro.url.searchParams.get('filter') ?? 'all') as ListFilter;
+const allowed: ListFilter[] = ['all', 'new', 'chase', 'needswork', 'confirmed'];
+const filter: ListFilter = allowed.includes(filterParam) ? filterParam : 'all';
+
+const rows = filterRows(buildRows(regs), q, filter);
+
+const FILTERS: Array<[ListFilter, string]> = [
+  ['all', 'All'], ['new', 'New'], ['needswork', 'Needs work'], ['chase', 'To chase'], ['confirmed', 'Confirmed'],
+];
+const statusChip: Record<string, string> = {
+  submitted: 'warn', in_review: 'plan', confirmed: 'ok', cancelled: 'req',
+};
+---
+<Base title="All registrations" wide help={false}>
+  <div class="topbar">
+    <a class="btn small btn-ghost" href="/admin">← What needs you</a>
+    <h1 style="margin:0; font-size:1.25rem">All registrations</h1>
+    <span class="muted small">{rows.length} shown</span>
+  </div>
+
+  <NeedsYou jobs={jobs} />
+
+  <form method="GET" class="btn-row" style="gap:8px; align-items:flex-end; flex-wrap:wrap">
+    <input type="text" name="q" value={q} placeholder="Search surname, email, reference…" style="max-width:320px" />
+    <input type="hidden" name="filter" value={filter} />
+    <button type="submit" class="btn small btn-primary" style="width:auto">Search</button>
+    {q && <a class="btn small btn-ghost" href={`/admin/registrations?filter=${filter}`} style="width:auto">Clear</a>}
+  </form>
+
+  <div class="tabs">
+    {FILTERS.map(([key, label]) => (
+      <a class={`tab ${filter === key ? 'active' : ''}`} href={`/admin/registrations?filter=${key}${q ? `&q=${encodeURIComponent(q)}` : ''}`}>{label}</a>
+    ))}
+  </div>
+
+  {rows.length === 0 ? (
+    <div class="card"><p class="muted">No registrations match.</p></div>
+  ) : (
+    <table class="table">
+      <thead><tr><th>Ref</th><th>Family</th><th>People</th><th>Arrives</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr>
+            <td>{row.shortRef}</td>
+            <td>
+              <b>{row.family}</b><br /><span class="small muted">{row.contact}</span>
+              <div style="margin-top:4px">
+                {row.isNew && <span class="chip warn">New</span>}{' '}
+                {row.needsChase && <span class="chip gold">To chase</span>}{' '}
+                {row.editedAfterConfirm && <span class="chip plan">Edited</span>}{' '}
+                {row.isDuplicate && <span class="chip req">Possible duplicate</span>}
+              </div>
+            </td>
+            <td>{row.people}</td>
+            <td>{row.arrivalLabel}</td>
+            <td><span class={`chip ${statusChip[row.status] ?? 'plan'}`}>{row.status.replace('_', ' ')}</span></td>
+            <td><a class="btn small btn-primary" href={`/admin/registrations/${row.ref}`}>Open</a></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</Base>

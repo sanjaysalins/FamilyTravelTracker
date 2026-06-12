@@ -1,0 +1,53 @@
+---
+import Base from '../../../../layouts/Base.astro';
+import RegistrationForm from '../../../../components/RegistrationForm.astro';
+import { config } from '../../../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../../../lib/csrf';
+import { requireSession } from '../../../../lib/auth';
+import { store } from '../../../../lib/store';
+import { docToFormValues } from '../../../../lib/registration-form';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+const ref = Astro.params.ref ?? '';
+const doc = await store.getRegistration(ref);
+
+// One-shot validation flash (set by /api/admin/edit on a rejected save).
+let flash: { errors?: Record<string, string>; values?: Record<string, string> } = {};
+const flashRaw = Astro.cookies.get('ftc_form')?.value;
+if (flashRaw) {
+  try { flash = JSON.parse(flashRaw); } catch { /* ignore */ }
+  Astro.cookies.delete('ftc_form', { path: '/' });
+}
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, {
+  path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200,
+});
+
+const values = flash.values ?? (doc ? docToFormValues(doc) : {});
+---
+<Base title="Edit registration (admin)" help={false}>
+  {!doc && <div class="card"><p>No registration found for <b>{ref}</b>.</p></div>}
+  {doc && (
+    <>
+      <div class="topbar">
+        <a class="btn small btn-ghost" href={`/admin/registrations/${ref}`}>← Back to family</a>
+        <h1 style="margin:0; font-size:1.2rem">Edit · {ref.split('-').pop()}</h1>
+        <span></span>
+      </div>
+      <p class="muted small">You can change anything the family submitted. Saving re-opens a confirmed
+      registration for review and resets only the legs you touch.</p>
+
+      <RegistrationForm
+        mode="edit"
+        action="/api/admin/edit"
+        csrf={csrf}
+        regRef={ref}
+        token=""
+        values={values}
+        errors={flash.errors ?? {}}
+      />
+    </>
+  )}
+</Base>
