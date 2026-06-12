@@ -1,0 +1,30 @@
+---
+import Base from '../../layouts/Base.astro';
+import { config } from '../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
+import { requireSession } from '../../lib/auth';
+
+// Route guard: every /admin/* page re-checks the session (and slides the idle window).
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+// CSRF for the logout form.
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, {
+  path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200,
+});
+const { birthdayName, birthdayAge, town } = config.event;
+---
+<Base title="Action Centre" wide help={false}>
+  <div class="topbar">
+    <div>
+      <div class="muted small">{birthdayName}'s {birthdayAge}th · {town}</div>
+      <h1 style="margin:0">Action Centre</h1>
+    </div>
+    <form method="POST" action="/api/admin/logout">
+      <input type="hidden" name="csrf_token" value={csrf} />
+      <button type="submit" class="btn small btn-ghost">Log out</button>
+    </form>
+  </div>
+
+  <div class="banner info">You're logged in. The guided jobs list lands in the next slice (5.2).</div>
+</Base>

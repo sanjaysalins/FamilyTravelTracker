@@ -1,0 +1,45 @@
+---
+import Base from '../../layouts/Base.astro';
+import { config } from '../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
+import { SESSION_COOKIE, sessionValid } from '../../lib/auth';
+
+// Already logged in? Skip the form.
+if (sessionValid(Astro.cookies.get(SESSION_COOKIE)?.value, new Date())) {
+  return Astro.redirect('/admin');
+}
+
+// One-shot error flash set by /api/admin/login on a bad/locked attempt.
+let error = '';
+const flash = Astro.cookies.get('ftc_admin_err')?.value;
+if (flash) {
+  error = flash === 'locked'
+    ? 'Too many attempts. Please wait a minute and try again.'
+    : 'Incorrect password.';
+  Astro.cookies.delete('ftc_admin_err', { path: '/' });
+}
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, {
+  path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200,
+});
+const { birthdayName, birthdayAge } = config.event;
+---
+<Base title="Organiser login" help={false}>
+  <div class="hero">
+    <div class="kicker">{birthdayName}'s {birthdayAge}th · organiser</div>
+    <h1>Organiser login</h1>
+    <p>For the family travel coordinator. This area is private.</p>
+  </div>
+
+  <form class="card" method="POST" action="/api/admin/login">
+    <input type="hidden" name="csrf_token" value={csrf} />
+
+    {error && <div class="banner warn">{error}</div>}
+
+    <label class="fl" for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required autofocus />
+
+    <button type="submit" class="btn btn-primary" style="margin-top:16px">Log in</button>
+  </form>
+</Base>
