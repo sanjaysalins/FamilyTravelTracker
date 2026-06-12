@@ -1,9 +1,15 @@
 # RESUME — Family Travel Coordinator
 
-**Last worked:** 2026-06-12 (paused, end of Phase 5 — guided admin complete). **LIVE on Netlify** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
+**Last worked:** 2026-06-12 (paused after Phase 6 + Phase 7 build-parts). **LIVE on Netlify** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
 
-**▶ PICK UP HERE:** Phases **0 → 5 are DONE** (guest registration + edit + email + the full guided
-admin; **100 tests** pass; `npm run build` clean). **NEXT = Phase 6 (reports & CSV export).**
+**▶ PICK UP HERE:** Phases **0 → 6 are DONE** plus **Phase 7's build-parts** (guest register + edit +
+email + full guided admin + reports/CSV + privacy/delete/retention; **112 tests** pass; `npm run build`
+clean). Commits `7bb4f96 → 0724a65` are **NOT pushed** (a push deploys to prod — needs your OK).
+**NEXT = finish Phase 7 (verify + restore-tested backup), then Phase 8 (cutover) + Phase 9 (dry run).**
+Phase 6 = `reports.ts` (arrivals/departures, seat-demand=sum people, run sheet, chase, headcount) +
+Excel-safe CSV (BOM/DD-MM-YYYY/+phones, no tokens/health) at `/admin/reports` + CSV endpoints. Phase 7
+build-parts = `/privacy` (DRAFT wording — review before go-live), per-family cancel/delete (cascades
+into bookings, leaves no PII), retention reminder on `/admin` after event+`RETENTION_DAYS`.
 Phase 5 built (committed `1cf0023 → c8ac296`, 5 slices): admin auth (signed session, bcrypt login,
 Blobs rate-limit, guard), the **Action Centre** (live job counts + Needs-you strip), all-registrations
 list, per-family wizard + admin edit, the **vehicle planner** (60-min clustering → suggested bookings),
@@ -165,11 +171,18 @@ guardrail blocks running destructive actions against the **live** site without t
   **NOTE:** clarification email + the `channel:'email'|'whatsapp'` log field were NOT needed — the
   wa.me twin is a plain link, no logging; clarification template exists but has no admin trigger yet
   (could add a "request clarification" action later). Reports hub is a placeholder (Phase 6).
-- **Phase 6** — ← NEXT: reports + hire list + run sheet + Excel-safe CSV (port `prototype/admin-reports.html`).
-  `reports.ts` over `listRegistrations()`: arrivals/departures schedules, **seat demand (sum people, not
-  legs)**, per-driver run sheet (print, from `vehicle_bookings`), chase list, headcount; CSV = UTF-8+BOM,
-  DD-MM-YYYY text, `+…` phones, **no tokens/health notes**. Fills the `/admin/reports` placeholder.
-- **Phase 7** — privacy/retention + restore-tested backup. **Phase 8** — cutover. **Phase 9** — dry run.
+- **Phase 6** — ✅ DONE (commit `89572b4`). `reports.ts` (pure): arrivals/departures schedules,
+  **seat demand = sum people not legs**, per-driver run sheet (no health notes), chase list, headcount;
+  Excel-safe CSV writer (UTF-8 BOM, CRLF, DD-MM-YYYY text, `+…` phones; export excludes tokens + special
+  requirements). `/admin/reports` hub (KPIs + tables + CSV links), `/admin/reports/run-sheet` (print one
+  page/driver), `/api/admin/reports/{arrivals,departures,export}.csv`. 9 tests; live-verified BOM + no-token.
+- **Phase 7** — ◑ build-parts DONE (commit `0724a65`): `privacy.ts` (deleteRegistrationCascade + isRetentionDue),
+  `/api/admin/delete-registration` (cancel/delete), per-family Danger zone, `/privacy` (DRAFT), retention
+  reminder on `/admin`, delete-no-PII test. **STILL TO DO:** verify the standing security DoD held on every
+  form (CSRF/escaping/cookie flags/no token in logs); finalise the privacy wording; **restore-tested backup**
+  (export → re-import into a scratch store → confirm counts + a known family opens) + document it in the README.
+- **Phase 8** — cutover (mostly user/Netlify): real env vars, custom domain + HSTS, `/healthz`, live smoke.
+- **Phase 9** — acceptance walk + dry run with 2–3 real relatives on their phones.
 
 ## Watch-outs (from the plan review — already baked into the plan)
 
