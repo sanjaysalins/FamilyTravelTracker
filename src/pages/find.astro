@@ -15,11 +15,18 @@ Astro.cookies.set(CSRF_COOKIE, csrf, {
 ---
 <Base title="Find my registration">
   <h1>Find my registration</h1>
-  {done ? (
+  {done && config.resendApiKey ? (
     <div class="card">
       <h2>Check your email 📧</h2>
       <p>If a registration matches that email address, we've sent a fresh private link to it. Please check your inbox (and spam folder). Note: <b>any older link you had will stop working</b> — use the newest one.</p>
       <HelpContact lead="Didn't get the email, or used a different one?" />
+      <a class="btn btn-ghost" href="/" style="margin-top:8px">Back to home</a>
+    </div>
+  ) : done ? (
+    <div class="card">
+      <h2>We'll help you directly</h2>
+      <p>Automatic email isn't switched on yet, so please contact the organiser and we'll send your private link straight to you.</p>
+      <HelpContact lead="To get your edit link:" />
       <a class="btn btn-ghost" href="/" style="margin-top:8px">Back to home</a>
     </div>
   ) : (

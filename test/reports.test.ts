@@ -49,14 +49,18 @@ describe('schedule', () => {
 });
 
 describe('runSheets', () => {
-  it('groups by driver and never includes special requirements (health)', () => {
+  it('groups by driver, carries no health note or guest free-text, and dates each stop', () => {
     const r = reg({ special_requirements: 'wheelchair access needed' }, 'BDAY-2026-0001');
     const arr = r.legs.find((l) => l.direction === 'arrival')!;
     arr.driver_name = 'Ravi'; arr.driver_phone_e164 = '+919000000000'; arr.pickup_point = 'Gate 3'; arr.pickup_time_confirmed = '11:00';
+    arr.guest_notes = 'has a heart condition'; // guest free-text must never reach a forwarded run sheet
     const sheets = runSheets([r], []);
     expect(sheets).toHaveLength(1);
     expect(sheets[0].driver).toBe('Ravi');
-    expect(JSON.stringify(sheets[0])).not.toContain('wheelchair'); // health note excluded
+    const json = JSON.stringify(sheets[0]);
+    expect(json).not.toContain('wheelchair');        // special requirements excluded
+    expect(json).not.toContain('heart condition');   // guest_notes excluded
+    expect(sheets[0].stops[0].date).toBe('2026-10-16'); // each stop is dated for per-day grouping
   });
 });
 

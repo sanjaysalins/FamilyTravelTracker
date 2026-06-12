@@ -72,8 +72,10 @@ export function seatDemand(regs: Registration[]): SeatDemandRow[] {
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** Per-driver run sheet (print). One group per driver, stops sorted by pickup time. NO health notes. */
-export interface RunStop { time: string; pickup: string; guest: string; phone: string; people: number; route: string; vehicle: string; notes: string }
+/** Per-driver run sheet (print). One group per driver, grouped by day, sorted by pickup time.
+ *  Deliberately carries NO guest free-text (`guest_notes`) and NO health/special requirements — run
+ *  sheets get forwarded to hired drivers over WhatsApp, so only operational fields appear. */
+export interface RunStop { date: string; time: string; pickup: string; guest: string; phone: string; people: number; route: string; vehicle: string }
 export interface RunSheet { driver: string; phone: string; stops: RunStop[] }
 export function runSheets(regs: Registration[], bookings: VehicleBooking[]): RunSheet[] {
   const veh = vehicleMap(bookings);
@@ -84,6 +86,7 @@ export function runSheets(regs: Registration[], bookings: VehicleBooking[]): Run
       const key = l.driver_name;
       const sheet = byDriver.get(key) ?? { driver: l.driver_name, phone: l.driver_phone_e164 ?? '', stops: [] };
       sheet.stops.push({
+        date: l.travel_date ?? '',
         time: l.pickup_time_confirmed || l.travel_time || '',
         pickup: l.pickup_point ?? `${l.from_location}`,
         guest: guestName(r),
@@ -91,12 +94,12 @@ export function runSheets(regs: Registration[], bookings: VehicleBooking[]): Run
         people: l.people_on_this_leg,
         route: `${l.from_location} → ${l.to_location}`,
         vehicle: l.vehicle_booking_id ? (veh.get(l.vehicle_booking_id) ?? '') : '',
-        notes: l.guest_notes ?? '',   // guest travel notes only — never special_requirements (health)
       });
       byDriver.set(key, sheet);
     }
   }
-  for (const s of byDriver.values()) s.stops.sort((a, b) => sortKey(a.time).localeCompare(sortKey(b.time)));
+  // Sort each driver's stops by day, then by pickup time, so a multi-day driver gets a per-day plan.
+  for (const s of byDriver.values()) s.stops.sort((a, b) => (a.date + sortKey(a.time)).localeCompare(b.date + sortKey(b.time)));
   return [...byDriver.values()].sort((a, b) => a.driver.localeCompare(b.driver));
 }
 
