@@ -23,7 +23,7 @@ const eMsg = (name: string): string => errors[name] ?? '';
 const radio = (name: string, val: string, dflt = ''): boolean => (values[name] ?? dflt) === val;
 const isChecked = (name: string, dflt = false): boolean => (name in values ? values[name] === 'on' : dflt);
 
-const { town, birthdayName } = config.event;
+const { town, birthdayName, hub } = config.event;
 const hasErrors = Object.keys(errors).length > 0;
 const submitLabel = mode === 'edit' ? 'Save changes ✓' : 'Submit registration ✓';
 
@@ -57,6 +57,13 @@ const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
 
   <!-- STEP 1 -->
   <section class="step" data-step="1" data-name="About you">
+    {mode === 'create' && (
+      <div class="banner info" style="margin-top:0">
+        <b>5 short pages:</b> about you · who's coming · your travel · trips between towns · anything else.
+        You can stop and finish later. Fields marked <span class="req">*</span> are the few we really need.
+        <br /><a href="/find">Already registered? Edit your details instead →</a>
+      </div>
+    )}
     <div class="card">
       <h2>About you</h2>
       <p class="muted small">The main person we should contact for this family group.</p>
@@ -89,6 +96,7 @@ const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
       </div>
       <p class="hint">Example: 98765 43210. Spaces are fine.</p>
       <p class="small" id="phonemsg" aria-live="polite"></p>
+      <p class="hint">Outside India? Pick your country first, then type your number — any format is fine (with or without a leading 0).</p>
       {has('phone') && <p class="err">{eMsg('phone')}</p>}
 
       <label class="choice" style="margin-top:14px">
@@ -170,11 +178,12 @@ const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
       <div class="btn-row" style="margin-top:6px">
         <div style="flex:1"><label class="fl" for="arr_time">Arrival time</label>
           <input id="arr_time" type="time" name="arr_time" value={v('arr_time')} /></div>
-        <div style="flex:1"><label class="fl" for="arr_mode">Mode</label>
+        <div style="flex:1"><label class="fl" for="arr_mode">How are you travelling?</label>
           <select id="arr_mode" name="arr_mode">
             {MODES.map(([val, label]) => <option value={val} selected={radio('arr_mode', val, 'flight')}>{label}</option>)}
           </select></div>
       </div>
+      <p class="hint">Don't know the time yet? Leave it blank — you can add it later with your private link.</p>
       <label class="fl" for="arr_ref">Flight / train number (optional)</label>
       <input id="arr_ref" type="text" name="arr_ref" value={v('arr_ref')} />
 
@@ -206,7 +215,7 @@ const sizes = Array.from({ length: 10 }, (_, i) => String(i + 1));
 
       <label class="fl" for="dep_time">What time does your flight / train leave?</label>
       <input id="dep_time" type="time" name="dep_time" value={v('dep_time')} />
-      <div class="banner info" style="margin-top:8px">🕒 {town} to the airport hub takes time — we'll plan your car to leave early enough, counting back from this time plus check-in.</div>
+      <div class="banner info" style="margin-top:8px">🕒 {town} to {hub} airport takes time — we'll plan your car to leave early enough, counting back from this time plus check-in.</div>
 
       <label class="fl" for="dep_leaveby">Preferred time to leave {town} (optional)</label>
       <input id="dep_leaveby" type="time" name="dep_leaveby" value={v('dep_leaveby')} />
