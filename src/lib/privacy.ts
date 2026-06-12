@@ -18,6 +18,16 @@ export async function deleteRegistrationCascade(ref: string, now: string): Promi
   await store.deleteRegistration(ref);
 }
 
+/**
+ * Remove operational PII that doesn't live inside a registration document. Right now that's the
+ * login-attempt IP counters in the `system` store — delete-all must leave no trace, including IPs
+ * (PRD §17). Registration documents already carry their own audit + email log, so deleting them
+ * removes that PII too.
+ */
+export async function purgeOperationalPII(): Promise<void> {
+  await store.putSystem('login_attempts', {});
+}
+
 /** True once the event has been over for `retentionDays` — the cue to delete all data (PRD §17). */
 export function isRetentionDue(eventEndIso: string, retentionDays: number, now: Date): boolean {
   const end = new Date(`${eventEndIso}T00:00:00Z`).getTime();

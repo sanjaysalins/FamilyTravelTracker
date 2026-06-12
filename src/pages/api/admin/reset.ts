@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { store } from '../../../lib/store';
 import { config } from '../../../lib/config';
 import { adminPost } from '../../../lib/admin-api';
+import { purgeOperationalPII } from '../../../lib/privacy';
 
 export const prerender = false;
 
@@ -19,7 +20,8 @@ export const POST: APIRoute = async (ctx) => {
   const now = new Date().toISOString();
   await store.snapshot('_before_delete_all', now); // one-step undo
   await store.wipeAll();
+  await purgeOperationalPII(); // clear login-attempt IPs too — no residual PII (PRD §17)
 
-  ctx.cookies.set('ftc_admin_flash', 'All family data deleted. A "_before_delete_all" snapshot was saved.', { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 30 });
+  ctx.cookies.set('ftc_admin_flash', 'All family data deleted (including login-attempt records). A "_before_delete_all" snapshot was saved.', { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 30 });
   return ctx.redirect('/admin/settings', 303);
 };
