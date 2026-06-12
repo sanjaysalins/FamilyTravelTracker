@@ -1,0 +1,19 @@
+---
+// 'Needs you' strip (PRD §9.1) — a thin banner on the advanced admin pages so an outstanding job
+// is never out of sight. Shows the same outstanding counts as the Action Centre, with a jump back.
+import type { Job } from '../lib/tasks';
+import { needsYouItems } from '../lib/tasks';
+
+interface Props { jobs: Job[] }
+const { jobs } = Astro.props;
+const items = needsYouItems(jobs);
+---
+{items.length > 0 && (
+  <div class="needs">
+    <span>⚠ <b>Needs you:</b></span>
+    {items.map((it, i) => (
+      <span>{i > 0 && <span class="muted">· </span>}{it.n} {it.label}</span>
+    ))}
+    <a href="/admin">Go to jobs ›</a>
+  </div>
+)}

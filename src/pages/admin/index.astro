@@ -3,28 +3,52 @@ import Base from '../../layouts/Base.astro';
 import { config } from '../../lib/config';
 import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
 import { requireSession } from '../../lib/auth';
+import { loadJobs } from '../../lib/tasks';
 
 // Route guard: every /admin/* page re-checks the session (and slides the idle window).
 if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
 
-// CSRF for the logout form.
 const csrf = issueCsrf();
 Astro.cookies.set(CSRF_COOKIE, csrf, {
   path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200,
 });
+
+const jobs = await loadJobs();
 const { birthdayName, birthdayAge, town } = config.event;
 ---
-<Base title="Action Centre" wide help={false}>
-  <div class="topbar">
-    <div>
-      <div class="muted small">{birthdayName}'s {birthdayAge}th · {town}</div>
-      <h1 style="margin:0">Action Centre</h1>
+<Base title="What needs you" help={false}>
+  <div class="hero">
+    <div class="kicker">{birthdayName}'s {birthdayAge}th · {town} · organiser</div>
+    <div class="topbar" style="margin:0">
+      <h1 style="margin:.1em 0">What needs you</h1>
+      <form method="POST" action="/api/admin/logout">
+        <input type="hidden" name="csrf_token" value={csrf} />
+        <button type="submit" class="btn small btn-ghost">Log out</button>
+      </form>
     </div>
-    <form method="POST" action="/api/admin/logout">
-      <input type="hidden" name="csrf_token" value={csrf} />
-      <button type="submit" class="btn small btn-ghost">Log out</button>
-    </form>
+    <p>One thing at a time. Tap a job to work through it.</p>
   </div>
 
-  <div class="banner info">You're logged in. The guided jobs list lands in the next slice (5.2).</div>
+  <div class="tasklist">
+    {jobs.map((job) => (
+      job.n === 0 ? (
+        <div class="task zero">
+          <span class="badge">✓</span>
+          <span><span class="tt">{job.icon} {job.title}</span><br><span class="ts">All done 🎉</span></span>
+        </div>
+      ) : (
+        <a class="task" href={job.href}>
+          <span class="badge">{job.n}</span>
+          <span><span class="tt">{job.icon} {job.title}</span><br><span class="ts">{job.sub}</span></span>
+          <span class="arrow">›</span>
+        </a>
+      )
+    ))}
+  </div>
+
+  <div class="card">
+    <a class="btn btn-ghost" href="/admin/registrations">📁 All registrations</a>
+    <a class="btn btn-ghost" href="/admin/vehicles" style="margin-top:10px">🚐 Vehicles &amp; bookings</a>
+    <a class="btn btn-ghost" href="/admin/reports" style="margin-top:10px">📋 Reports &amp; driver plan</a>
+  </div>
 </Base>
