@@ -8,8 +8,10 @@ import { store } from '../../lib/store';
 import { config } from '../../lib/config';
 import { CSRF_COOKIE, CSRF_FIELD, verifyCsrf } from '../../lib/csrf';
 import { nextReference } from '../../lib/reference';
-import { generateToken } from '../../lib/tokens';
+import { generateToken, buildEditLink } from '../../lib/tokens';
 import { buildRegistration } from '../../lib/registration-form';
+import { sendEmail, eventInfo } from '../../lib/email';
+import { ackEmail } from '../../lib/email-templates';
 
 export const prerender = false;
 
@@ -80,6 +82,15 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     seen[nonce] = reference;
     await store.putSystem(NONCE_KEY, seen);
   }
+
+  // Acknowledgement email with the edit link. The record is already saved and the success page
+  // shows the link on screen, so a delivery failure must NEVER block the guest (PRD §11). sendEmail
+  // never throws; we still wrap defensively, and persist whatever it logged onto the document.
+  try {
+    const editLink = buildEditLink(config.appBaseUrl, reference, rawToken);
+    const { doc: withEmail } = await sendEmail(result.doc, 'ack', ackEmail(result.doc, editLink, eventInfo()), nowIso);
+    await store.putRegistration(withEmail);
+  } catch { /* never break submit */ }
 
   // hand the RAW token to the success page (out of the URL) via a short-lived cookie
   cookies.set('ftc_new', JSON.stringify({ ref: reference, token: rawToken }), {

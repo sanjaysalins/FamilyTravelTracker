@@ -1,11 +1,16 @@
 # RESUME — Family Travel Coordinator
 
-**Last worked:** 2026-06-09 (paused). **LIVE on Netlify** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
+**Last worked:** 2026-06-12 (paused, end of Phase 4). **LIVE on Netlify** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
 
-**▶ PICK UP HERE:** Phases **0, 0.5, 1, 2a, 2b, 3 are DONE** (guest registration + edit-later flow
-fully built; 59 tests pass; `npm run build` clean). Local commits **a4a5b48 → 16f63a8** are
-**NOT pushed yet** (push `main` to deploy). **NEXT = Phase 4 (email)** — see the per-phase list below;
-it also un-stubs `/find` and the success ack email, and needs the open Phase 0.5 Resend signup (user).
+**▶ PICK UP HERE:** Phases **0, 0.5, 1, 2a, 2b, 3, 4 are DONE** (guest registration + edit-later
+flow + email layer fully built; **70 tests** pass; `npm run build` clean). Local commits
+**a4a5b48 → 16f63a8** plus the new Phase-4 commit are **NOT pushed yet** (push `main` to deploy).
+**NEXT = Phase 5 (guided admin)** — see the per-phase list below. Phase 4 built the 4 templates +
+send layer and wired the **ack email** (register) + **token-regenerate resend** (`/find`); the
+confirmation/clarification/updated templates are ready for Phase 5 to call from admin actions.
+Still open (user): Phase 0.5 Resend signup — set `RESEND_API_KEY`/`EMAIL_FROM`/`TEST_EMAIL_RECIPIENT`
++ `APP_BASE_URL` in Netlify so real mail sends (until then sends log `failed: RESEND_API_KEY not set`,
+which never blocks submit).
 
 **Live admin token (temporary):** the `/api/admin/data` endpoint is guarded by `SESSION_SECRET`
 (value in local `.env` + Netlify env — never commit it). Admin login password is stored in `.env`
@@ -65,6 +70,10 @@ drivers, and confirms by email. Guests don't pay — **no cost is ever shown to 
 | **Phase 3:** edit-later flow — shared `RegistrationForm.astro`, `/edit/<ref>?token=`, `/api/edit` | ✅ done |
 | — `applyEdit` cascade (confirmed→in_review, only touched legs reset); `/find` generic resend | ✅ + tests |
 | — **59 tests** pass; verified live (reopen, bad-token refusal, round-trip). find-email = Phase-4 stub | ✅ |
+| **Phase 4:** email — `email-templates.ts` (ack/confirmation/clarification/updated, pure, no-cost, HTML-escaped) | ✅ done |
+| — `email.ts` send layer: Resend via `fetch` (no SDK dep), test-mode redirect, logs emails[]+audit, never-throws | ✅ + tests |
+| — wired **ack** into `/api/register`; **token-regenerate resend** into `/api/find` (old link only dies once new one sends) | ✅ |
+| — **70 tests** pass; `npm run build` clean. Real send awaits user's Resend keys in Netlify | ✅ |
 
 ## Run it now
 
@@ -128,10 +137,21 @@ guardrail blocks running destructive actions against the **live** site without t
   data from ref+email). Pure `docToFormValues`/`applyEdit` unit-tested; **59 tests**. Verified live:
   edit reopens prefilled, bad token refused (GET + POST), edit round-trips. **NOTE: the find email
   send + token regenerate is a Phase-4 stub** (lookup works, no email yet — `src/pages/api/find.ts` TODO).
-- **Phase 4** — ← NEXT: email templates & logic (Resend; test-mode; ack/confirmation/clarification/
-  updated; log to `emails[]`; never break submit). Wires the find-resend + success ack emails.
-- **Phase 5** — guided admin (port `prototype/admin*.html`: Action Centre, assign/confirm flows,
-  per-family wizard, needs-you strip).
+- **Phase 4** — ✅ DONE. Email templates & logic. `src/lib/email-templates.ts` = 4 pure builders
+  (ack/confirmation/clarification/updated), each `{subject,text,html}`, HTML-escaped, **never any
+  cost/operator** (regression-tested). `src/lib/email.ts` sends via Resend's HTTP API (a single
+  `fetch`, no SDK dep), redirects to `TEST_EMAIL_RECIPIENT` in test-mode, appends `emails[]`+audit on
+  every attempt (sent OR failed), and **never throws**. Wired: ack on `/api/register` (after save,
+  can't block submit); `/api/find` now regenerates the edit token + emails the fresh link, only
+  invalidating the old link once the new one actually sends. With no `RESEND_API_KEY` the send logs
+  `failed: RESEND_API_KEY not set` and is otherwise a no-op. **70 tests.** confirmation/clarification/
+  updated builders exist + are tested but their admin send-triggers land in Phase 5.
+- **Phase 5** — ← NEXT: guided admin (port `prototype/admin*.html`: Action Centre, assign/confirm
+  flows, per-family wizard, needs-you strip). Calls the Phase-4 confirmation/clarification/updated
+  templates from the assign/confirm/clarify endpoints (with admin preview-before-send). **NEW:** each
+  email "Send" gets a **"Send on WhatsApp"** twin — a `wa.me/<digits>?text=` link reusing the
+  confirmation `.text` body (free, no WhatsApp API; we costed the API out for a one-off family event).
+  Needs a small additive `channel:'email'|'whatsapp'` field on the email-log. See DEVELOPMENT_PLAN.md Phase 5.4.
 - **Phase 6** — reports + hire list + run sheet (port `prototype/admin-reports.html`).
 - **Phase 7** — privacy/retention + restore-tested backup. **Phase 8** — cutover. **Phase 9** — dry run.
 

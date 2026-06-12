@@ -250,6 +250,15 @@ with a wall of data (PRD §9.1). The prototype (`prototype/admin*.html`) is the 
 4. **One-at-a-time job flows:** `/admin/assign` (one booking per screen → driver/phone/reg, Save &
    next) and `/admin/confirm` (one family per screen → cost-free email preview, Send & next). Progress
    count; "Skip" advances. **No cost field in either** (cost stays on the booking).
+   - **WhatsApp twin of the email confirm (no API, no cost):** next to "Send email", show a
+     **"Send on WhatsApp"** link that opens `https://wa.me/<digits>?text=<encoded message>` — the
+     organiser's *own* WhatsApp opens pre-filled and they tap send. Number = the family's
+     `whatsapp_e164` (fall back to `phone_e164`), digits only, `+`/spaces stripped. Message body =
+     **reuse the Phase-4 `confirmationEmail(...).text`** (same cost-free, no-operator content), URI-
+     encoded; same for clarification/updated. Tapping it records a `confirmation_sent_at` + audit
+     entry just like the email path (so the job clears), but writes an `emails[]`-style log marked
+     channel `whatsapp` — never reveal cost/operator. This is the cheap WhatsApp route we chose over
+     the WhatsApp Business API for a one-off family event.
 5. **Per-family wizard** (`/admin/registrations/<id>`, A3): Review → Transport → Assign → Confirm;
    one-click `wa.me`; audit trail; "mark reviewed" (status `submitted → in_review`).
 6. **'Needs you' strip** shared component on the advanced pages (A2 list, A5 vehicles, reports).
@@ -259,7 +268,12 @@ with a wall of data (PRD §9.1). The prototype (`prototype/admin*.html`) is the 
 
 **Done when:** the Action Centre shows correct live counts; you can clear "need a driver" and "to
 confirm" entirely through the one-at-a-time flows (each with a progress count); a confirmation email
-sends in test mode and shows **no cost**; lockout survives a redeploy.
+sends in test mode and shows **no cost**; the **"Send on WhatsApp"** link opens a pre-filled `wa.me`
+message (cost-free body, right number) and marks the family confirmed just like the email; lockout
+survives a redeploy.
+
+Note: the `wa.me` log needs a `channel: 'email' | 'whatsapp'` field on the email-log entry (a small
+additive type change in Phase 5 — the read-time tolerance in `store.ts` already back-fills it).
 
 ---
 
