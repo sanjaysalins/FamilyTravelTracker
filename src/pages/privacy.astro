@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import HelpContact from '../components/HelpContact.astro';
 import { config } from '../lib/config';
 const e = config.event;
 const contact = e.organiserName || 'the event organiser';
@@ -12,8 +13,6 @@ const contact = e.organiserName || 'the event organiser';
   </div>
 
   <div class="card">
-    <p class="muted small">Plain-English summary — please review the exact wording before go-live (DPDP/GDPR).</p>
-
     <h2>Why we collect this</h2>
     <p>So the organiser can arrange local transport (pickups and drop-offs) for family members
     travelling to {e.birthdayName}'s {e.birthdayAge}th in {e.town}. <b>There is no cost to you</b> —
@@ -29,8 +28,8 @@ const contact = e.organiserName || 'the event organiser';
     point and time — never your health/mobility notes, and never any cost information.</p>
 
     <h2>Where it's stored</h2>
-    <p>On Netlify's hosting platform (Netlify Blobs), whose servers may be located in the
-    <b>United States</b>. Access is restricted to the organiser by password.</p>
+    <p>On a secure hosting service whose servers may be located in the <b>United States</b>.
+    Access is restricted to the organiser by password.</p>
 
     <h2>How long we keep it</h2>
     <p>Your details are kept for the event and deleted within about {config.retentionDays} days
@@ -40,6 +39,7 @@ const contact = e.organiserName || 'the event organiser';
     <p>You can change or review your details any time using your private edit link (or
     <a href="/find">Find my registration</a>). To correct, cancel, or delete your registration,
     use your edit link or contact {contact}.</p>
+    <HelpContact lead="Questions about your data, or want it deleted?" />
 
     <a class="btn btn-ghost" href="/" style="margin-top:12px">← Back to home</a>
   </div>
