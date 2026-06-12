@@ -9,7 +9,12 @@ interface Props {
   help?: boolean;
 }
 const { title, wide = false, help = true } = Astro.props;
-const wa = config.event.organiserWhatsapp;
+// The "Need help?" button must always reach a human — WhatsApp if configured, else email, else
+// don't render it at all (never a dead `#` link). UAT blocker fix.
+const waDigits = config.event.organiserWhatsapp.replace(/[^0-9]/g, '');
+const helpHref = waDigits
+  ? `https://wa.me/${waDigits}`
+  : config.event.organiserEmail ? `mailto:${config.event.organiserEmail}` : null;
 ---
 <!doctype html>
 <html lang="en">
@@ -24,13 +29,8 @@ const wa = config.event.organiserWhatsapp;
     <slot />
   </div>
 
-  {help && (
-    <a
-      class="fab"
-      href={wa ? `https://wa.me/${wa.replace(/[^0-9]/g, '')}` : '#'}
-      target="_blank"
-      rel="noopener"
-    >💬 Need help?</a>
+  {help && helpHref && (
+    <a class="fab" href={helpHref} target="_blank" rel="noopener">💬 Need help?</a>
   )}
 </body>
 </html>

@@ -1,0 +1,24 @@
+---
+// A human fallback contact line (organiser WhatsApp / email), or nothing if none is configured.
+// Used wherever a stuck guest might dead-end: /find, the broken-edit page, the privacy notice.
+// UAT theme #1/#4 — never strand a guest with no way to reach a person.
+import { config } from '../lib/config';
+
+interface Props { lead?: string; compact?: boolean }
+const { lead = "Can't find the email, or stuck?", compact = false } = Astro.props;
+
+const name = config.event.organiserName;
+const wa = config.event.organiserWhatsapp;
+const email = config.event.organiserEmail;
+const waDigits = wa.replace(/[^0-9]/g, '');
+const waHref = waDigits ? `https://wa.me/${waDigits}` : null;
+const who = name || 'the organiser';
+---
+{(waHref || email) && (
+  <p class={compact ? 'muted small' : 'hint'} style="margin-top:10px">
+    {lead} Contact {who}
+    {waHref && <> on <a href={waHref} target="_blank" rel="noopener">WhatsApp{wa ? ` ${wa}` : ''}</a></>}
+    {email && <>{waHref ? ' or ' : ' on '}<a href={`mailto:${email}`}>{email}</a></>}
+    {' '}and we'll help you directly.
+  </p>
+)}

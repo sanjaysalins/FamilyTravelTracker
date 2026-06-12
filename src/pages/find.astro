@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import HelpContact from '../components/HelpContact.astro';
 import { config } from '../lib/config';
 import { CSRF_COOKIE, CSRF_FIELD, issueCsrf } from '../lib/csrf';
 
@@ -17,8 +18,9 @@ Astro.cookies.set(CSRF_COOKIE, csrf, {
   {done ? (
     <div class="card">
       <h2>Check your email 📧</h2>
-      <p>If a registration matches that email address, we've sent a fresh private link to it. Please check your inbox (and spam folder).</p>
-      <a class="btn btn-ghost" href="/">Back to home</a>
+      <p>If a registration matches that email address, we've sent a fresh private link to it. Please check your inbox (and spam folder). Note: <b>any older link you had will stop working</b> — use the newest one.</p>
+      <HelpContact lead="Didn't get the email, or used a different one?" />
+      <a class="btn btn-ghost" href="/" style="margin-top:8px">Back to home</a>
     </div>
   ) : (
     <div class="card">
@@ -29,7 +31,8 @@ Astro.cookies.set(CSRF_COOKIE, csrf, {
         <input id="email" type="email" name="email" autocomplete="email" />
         <button type="submit" class="btn btn-primary" style="margin-top:12px">Send my link</button>
       </form>
-      <p class="hint">For your privacy, we never show registration details from an email alone — we only email the link.</p>
+      <p class="hint">Use the same email you registered with. For your privacy, we never show registration details from an email alone — we only email the link.</p>
+      <HelpContact lead="Not sure which email you used?" />
     </div>
   )}
 </Base>

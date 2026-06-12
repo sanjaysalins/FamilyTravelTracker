@@ -42,6 +42,7 @@ export const config = {
     birthdayAge: Number(optional('BIRTHDAY_AGE', '60')),
     organiserName: optional('ORGANISER_NAME'),
     organiserWhatsapp: optional('ORGANISER_WHATSAPP_E164'),
+    organiserEmail: optional('ORGANISER_EMAIL'),
     eventCode: optional('EVENT_CODE'),
   },
 };

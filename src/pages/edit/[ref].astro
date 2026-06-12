@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import RegistrationForm from '../../components/RegistrationForm.astro';
+import HelpContact from '../../components/HelpContact.astro';
 import { config } from '../../lib/config';
 import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
 import { store } from '../../lib/store';
@@ -53,6 +54,7 @@ const reason =
       <p>For your security, edit links are private and time-limited. You can get a fresh one sent to your email.</p>
       <a class="btn btn-primary" href="/find">Email me a new link</a>
       <a class="btn btn-ghost" href="/" style="margin-top:10px">Back to home</a>
+      <HelpContact lead="Can't use email?" />
     </div>
   )}
 </Base>
