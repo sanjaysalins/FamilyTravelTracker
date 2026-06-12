@@ -16,7 +16,7 @@ const csrf = issueCsrf();
 Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
 
 const people = b ? b.covered_legs.reduce((s, c) => s + c.people, 0) : 0;
-const STATUSES = ['to_book', 'booked', 'assigned', 'completed', 'cancelled'];
+const STATUSES = ['suggested', 'to_book', 'booked', 'assigned', 'completed', 'cancelled'];
 ---
 <Base title="Booking · admin" help={false}>
   {!b && <div class="card"><p>No booking found for <b>{id}</b>. <a href="/admin/vehicles">Back to vehicles</a>.</p></div>}

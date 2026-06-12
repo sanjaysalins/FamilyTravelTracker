@@ -59,16 +59,16 @@ describe('computeJobs', () => {
     expect(jobs.find((j) => j.key === 'review')!.n).toBe(1);
   });
 
-  it('counts suggested bookings to-book, driverless bookings need-driver, assigned+driver to-confirm', () => {
+  it('book counts live planner suggestions; driverless bookings need-driver; assigned+driver to-confirm', () => {
+    const families = [reg({}, 'BDAY-2026-0007')]; // 2 unbooked dated transport legs -> 2 suggestions
     const bookings = [
-      booking({ id: 'V1', status: 'suggested' }),                                   // to-book + needs driver
       booking({ id: 'V2', status: 'booked', driver_name: null }),                   // needs driver
       booking({ id: 'V3', status: 'assigned', driver_name: 'Ravi', covered_legs: [{ registration_ref: 'R1', leg_id: 'L1', family_name: 'X', people: 2 }] }), // to-confirm (leg not confirmed)
       booking({ id: 'V4', status: 'cancelled', driver_name: null }),                // ignored
     ];
-    const jobs = computeJobs([], bookings);
-    expect(jobs.find((j) => j.key === 'book')!.n).toBe(1);
-    expect(jobs.find((j) => j.key === 'driver')!.n).toBe(2);   // V1 + V2 (cancelled excluded)
+    const jobs = computeJobs(families, bookings);
+    expect(jobs.find((j) => j.key === 'book')!.n).toBe(2);     // arrival + departure clusters
+    expect(jobs.find((j) => j.key === 'driver')!.n).toBe(1);   // V2 (cancelled excluded)
     expect(jobs.find((j) => j.key === 'confirm')!.n).toBe(1);
   });
 

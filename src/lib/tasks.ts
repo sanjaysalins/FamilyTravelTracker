@@ -4,6 +4,7 @@
 
 import type { Registration, TransportLeg, VehicleBooking } from './types';
 import { store } from './store';
+import { suggestClusters } from './planner';
 
 export type JobKey = 'review' | 'book' | 'driver' | 'confirm' | 'chase';
 
@@ -38,7 +39,10 @@ export function chaseLegs(regs: Registration[]): Array<{ reg: Registration; leg:
 /** The five Action-Centre jobs with live counts, in priority order. */
 export function computeJobs(regs: Registration[], bookings: VehicleBooking[]): Job[] {
   const toReview = regs.filter((r) => r.status === 'submitted').length;
-  const toBook = bookings.filter((b) => b.status === 'suggested').length;
+  // "ready to book" = live planner suggestions (unbooked legs the admin can group into a vehicle).
+  // Counting suggested-status BOOKINGS was always 0 (the planner's suggestions aren't persisted) and
+  // disagreed with the /admin/vehicles "Suggested pickups (N)" heading. UAT fix.
+  const toBook = suggestClusters(regs).length;
   const needDriver = bookings.filter((b) => b.status !== 'cancelled' && !b.driver_name).length;
   // "to confirm" = an assigned booking with a driver whose families aren't all emailed yet (some
   // covered leg isn't `confirmed`), so the count drops once a booking's confirmations are sent.

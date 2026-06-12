@@ -14,8 +14,10 @@ const [bookings, regs] = await Promise.all([store.listBookings(), store.listRegi
 const byRef = new Map(regs.map((r) => [r.reference_number, r]));
 const skip = new Set((Astro.url.searchParams.get('skip') ?? '').split(',').filter(Boolean));
 const skipParam = [...skip].join(',');
-const queue = confirmableBookings(bookings, regs).filter((b) => !skip.has(b.id));
+const pendingAll = confirmableBookings(bookings, regs);
+const queue = pendingAll.filter((b) => !skip.has(b.id));
 const current = queue[0];
+const skippedRemaining = pendingAll.length - queue.length;
 
 const csrf = issueCsrf();
 Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
@@ -37,7 +39,16 @@ const previews = current
       <div class="bar"><div class="fill" style={`width:${queue.length ? 8 : 100}%`}></div></div>
     </div>
 
-    {!current && (
+    {!current && skippedRemaining > 0 && (
+      <div class="card center">
+        <div style="font-size:3rem">⏭</div>
+        <h1>{skippedRemaining} still to confirm</h1>
+        <p class="muted">You skipped {skippedRemaining} family{skippedRemaining === 1 ? '' : ' groups'}. They haven't been emailed yet.</p>
+        <a class="btn btn-primary" href="/admin/confirm">Review the skipped ones</a>
+        <a class="btn btn-ghost" href="/admin" style="margin-top:10px">Back to What needs you</a>
+      </div>
+    )}
+    {!current && skippedRemaining === 0 && (
       <div class="card center">
         <div style="font-size:3rem">🎉</div>
         <h1>Families told</h1>

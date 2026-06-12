@@ -13,8 +13,10 @@ if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/lo
 const bookings = await store.listBookings();
 const skip = new Set((Astro.url.searchParams.get('skip') ?? '').split(',').filter(Boolean));
 const skipParam = [...skip].join(',');
-const queue = needDriverBookings(bookings).filter((b) => !skip.has(b.id));
+const pendingAll = needDriverBookings(bookings);
+const queue = pendingAll.filter((b) => !skip.has(b.id));
 const current = queue[0];
+const skippedRemaining = pendingAll.length - queue.length; // skipped but still need a driver
 
 const csrf = issueCsrf();
 Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
@@ -30,7 +32,16 @@ const verb = current ? (current.purpose === 'departure' ? `Leave ${current.route
       <div class="bar"><div class="fill" style={`width:${queue.length ? 8 : 100}%`}></div></div>
     </div>
 
-    {!current && (
+    {!current && skippedRemaining > 0 && (
+      <div class="card center">
+        <div style="font-size:3rem">⏭</div>
+        <h1>{skippedRemaining} still need a driver</h1>
+        <p class="muted">You skipped {skippedRemaining} booking{skippedRemaining === 1 ? '' : 's'}. They still need a driver before you can confirm those families.</p>
+        <a class="btn btn-primary" href="/admin/assign">Review the skipped ones</a>
+        <a class="btn btn-ghost" href="/admin" style="margin-top:10px">Back to What needs you</a>
+      </div>
+    )}
+    {!current && skippedRemaining === 0 && (
       <div class="card center">
         <div style="font-size:3rem">🎉</div>
         <h1>All vehicles have a driver</h1>

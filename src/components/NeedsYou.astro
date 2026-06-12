@@ -12,7 +12,7 @@ const items = needsYouItems(jobs);
   <div class="needs">
     <span>⚠ <b>Needs you:</b></span>
     {items.map((it, i) => (
-      <span>{i > 0 && <span class="muted">· </span>}{it.n} {it.label}</span>
+      <span>{i > 0 && <span class="muted">· </span>}{`${it.n} ${it.label}`}</span>
     ))}
     <a href="/admin">Go to jobs ›</a>
   </div>
