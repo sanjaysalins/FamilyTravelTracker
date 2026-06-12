@@ -1,6 +1,14 @@
 # RESUME — Family Travel Coordinator
 
-**Last worked:** 2026-06-12 (paused after Phase 6 + Phase 7 build-parts). **LIVE on Netlify** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
+**Last worked:** 2026-06-12 (Phases 0–6 + Phase 7 build-parts + a full UAT fix round A–F). **LIVE on Netlify**
+
+**UAT round (2026-06-12):** ran a 17-agent multi-persona UAT (live family site + local admin) → 106
+issues (1 blocker, 29 high). Fixed in 6 commits (A–F, see `UAT-FINDINGS.md`): dead "Need help?" FAB
+(now WhatsApp/mailto/hidden, never `#`); "you never pay" on landing + transport step; privacy draft
+note + jargon removed, contact added; wizard 5-step framing + plainer wording + review-summary on step
+5; admin status-dropdown data bug + "ready to book" count fixed; skip-vs-done; over-capacity now blocks
+confirm; post-send "Emailed ✓" banner; real progress bars; forward-safe run sheet (no guest_notes,
+per-day grouping). **112 tests; build clean; live-verified.** These 6 UAT commits are **NOT pushed**. at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
 
 **▶ PICK UP HERE:** Phases **0 → 6 are DONE** plus **Phase 7's build-parts** (guest register + edit +
 email + full guided admin + reports/CSV + privacy/delete/retention; **112 tests** pass; `npm run build`
