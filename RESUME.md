@@ -1,16 +1,21 @@
 # RESUME — Family Travel Coordinator
 
-**Last worked:** 2026-06-12 (paused, end of Phase 4). **LIVE on Netlify** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
+**Last worked:** 2026-06-12 (paused, end of Phase 5 — guided admin complete). **LIVE on Netlify** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
 
-**▶ PICK UP HERE:** Phases **0, 0.5, 1, 2a, 2b, 3, 4 are DONE** (guest registration + edit-later
-flow + email layer fully built; **70 tests** pass; `npm run build` clean). Local commits
-**a4a5b48 → 16f63a8** plus the new Phase-4 commit are **NOT pushed yet** (push `main` to deploy).
-**NEXT = Phase 5 (guided admin)** — see the per-phase list below. Phase 4 built the 4 templates +
-send layer and wired the **ack email** (register) + **token-regenerate resend** (`/find`); the
-confirmation/clarification/updated templates are ready for Phase 5 to call from admin actions.
-Still open (user): Phase 0.5 Resend signup — set `RESEND_API_KEY`/`EMAIL_FROM`/`TEST_EMAIL_RECIPIENT`
-+ `APP_BASE_URL` in Netlify so real mail sends (until then sends log `failed: RESEND_API_KEY not set`,
-which never blocks submit).
+**▶ PICK UP HERE:** Phases **0 → 5 are DONE** (guest registration + edit + email + the full guided
+admin; **100 tests** pass; `npm run build` clean). **NEXT = Phase 6 (reports & CSV export).**
+Phase 5 built (committed `1cf0023 → c8ac296`, 5 slices): admin auth (signed session, bcrypt login,
+Blobs rate-limit, guard), the **Action Centre** (live job counts + Needs-you strip), all-registrations
+list, per-family wizard + admin edit, the **vehicle planner** (60-min clustering → suggested bookings),
+the **assign-driver** + **confirm-&-email** one-at-a-time flows (confirm sends the Phase-4 cost-free
+email + offers a wa.me twin, auto-confirms a family when all its transport legs are confirmed), the
+email log and settings (JSON export + delete-all). Reports hub is a placeholder until Phase 6.
+
+**Resend is now WORKING** locally (real ack + confirmation emails verified to the test inbox).
+Still open for the **user, in Netlify env** (local `.env` already has placeholders): set the real
+`EMAIL_FROM` (currently the `onboarding@resend.dev` test sender — only reaches the signup address),
+`RESEND_API_KEY`, `TEST_EMAIL_RECIPIENT`, `APP_BASE_URL`, `ORGANISER_NAME`, `ORGANISER_WHATSAPP_E164`.
+Admin login password lives in local `.env` (gitignored).
 
 **Live admin token (temporary):** the `/api/admin/data` endpoint is guarded by `SESSION_SECRET`
 (value in local `.env` + Netlify env — never commit it). Admin login password is stored in `.env`
@@ -146,13 +151,24 @@ guardrail blocks running destructive actions against the **live** site without t
   invalidating the old link once the new one actually sends. With no `RESEND_API_KEY` the send logs
   `failed: RESEND_API_KEY not set` and is otherwise a no-op. **70 tests.** confirmation/clarification/
   updated builders exist + are tested but their admin send-triggers land in Phase 5.
-- **Phase 5** — ← NEXT: guided admin (port `prototype/admin*.html`: Action Centre, assign/confirm
-  flows, per-family wizard, needs-you strip). Calls the Phase-4 confirmation/clarification/updated
-  templates from the assign/confirm/clarify endpoints (with admin preview-before-send). **NEW:** each
-  email "Send" gets a **"Send on WhatsApp"** twin — a `wa.me/<digits>?text=` link reusing the
-  confirmation `.text` body (free, no WhatsApp API; we costed the API out for a one-off family event).
-  Needs a small additive `channel:'email'|'whatsapp'` field on the email-log. See DEVELOPMENT_PLAN.md Phase 5.4.
-- **Phase 6** — reports + hire list + run sheet (port `prototype/admin-reports.html`).
+- **Phase 5** — ✅ DONE (5 slices, commits `1cf0023 → c8ac296`). Guided admin. `auth.ts` (signed
+  HMAC session w/ sliding idle, bcrypt login, IP rate-limit in the `system` Blobs store, `requireSession`
+  guard) + `/admin/login`/`logout`. `tasks.ts` computes the 5 Action-Centre job counts; `/admin` is the
+  Action Centre; `NeedsYou.astro` strip on advanced pages. `admin-list.ts` + `/admin/registrations`
+  (search/filter, New/duplicate/edited/chase flags); `/admin/registrations/[ref]` per-family wizard
+  (Review/mark-reviewed, Transport, WhatsApp, audit) + `/edit` admin edit (reuses RegistrationForm +
+  `applyEdit`, session-authed). `planner.ts` (pure 60-min clustering → suggested vehicles, smallest-fit,
+  `allTransportLegsConfirmed`) + `vehicles.ts` (create/assign/confirm/detach/delete bookings; confirm
+  emails each family the Phase-4 cost-free confirmation + a `wa.me` twin, auto-confirms the family).
+  `/admin/vehicles` (+`[id]`), one-at-a-time `/admin/assign` + `/admin/confirm` flows (skip via query),
+  `/admin/email-log`, `/admin/settings` (JSON export + delete-all). `admin-api.ts` = shared POST guard.
+  **NOTE:** clarification email + the `channel:'email'|'whatsapp'` log field were NOT needed — the
+  wa.me twin is a plain link, no logging; clarification template exists but has no admin trigger yet
+  (could add a "request clarification" action later). Reports hub is a placeholder (Phase 6).
+- **Phase 6** — ← NEXT: reports + hire list + run sheet + Excel-safe CSV (port `prototype/admin-reports.html`).
+  `reports.ts` over `listRegistrations()`: arrivals/departures schedules, **seat demand (sum people, not
+  legs)**, per-driver run sheet (print, from `vehicle_bookings`), chase list, headcount; CSV = UTF-8+BOM,
+  DD-MM-YYYY text, `+…` phones, **no tokens/health notes**. Fills the `/admin/reports` placeholder.
 - **Phase 7** — privacy/retention + restore-tested backup. **Phase 8** — cutover. **Phase 9** — dry run.
 
 ## Watch-outs (from the plan review — already baked into the plan)
