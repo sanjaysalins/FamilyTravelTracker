@@ -1,6 +1,6 @@
 # RESUME — Family Travel Coordinator
 
-**Last worked:** 2026-06-12 (Phases 0–6 + Phase 7 build-parts + a full UAT fix round A–F). **LIVE on Netlify**
+**Last worked:** 2026-06-13 (Phases 0–7 complete + a full UAT fix round A–F; only cutover + dry-run left). **LIVE on Netlify**
 
 **UAT round (2026-06-12) — DONE, PUSHED, LIVE:** ran a 17-agent multi-persona UAT (live family site +
 local admin) → 106 issues (1 blocker, 29 high). Fixed in 6 commits (A–F, see `UAT-FINDINGS.md`): dead
@@ -12,10 +12,10 @@ sheet (no guest_notes, per-day grouping). **112 tests; build clean.** Pushed (`7
 **deploy verified GREEN** on https://bidarplan.netlify.app (cost line, "5 short pages", "How are you
 travelling?", privacy link all confirmed live). **Everything is committed + pushed — `main` is in sync.** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
 
-**▶ PICK UP HERE:** Phases **0 → 6 are DONE** plus **Phase 7's build-parts** (guest register + edit +
-email + full guided admin + reports/CSV + privacy/delete/retention; **112 tests** pass; `npm run build`
-clean) **plus a full UAT fix round (A–F)** — all committed, **pushed, and live (deploy verified green)**.
-**NEXT = finish Phase 7 (verify + restore-tested backup), then Phase 8 (cutover) + Phase 9 (dry run).**
+**▶ PICK UP HERE:** Phases **0 → 7 are DONE** (guest register + edit +
+email + full guided admin + reports/CSV + privacy/delete/retention + restore-tested backup; **115 tests** pass; `npm run build`
+clean) **plus a full UAT fix round (A–F) and Phase 7 finished** — all committed and **live**.
+**NEXT = Phase 8 (cutover — mostly Netlify env + custom domain + /healthz) + Phase 9 (dry run with real relatives).**
 Phase 6 = `reports.ts` (arrivals/departures, seat-demand=sum people, run sheet, chase, headcount) +
 Excel-safe CSV (BOM/DD-MM-YYYY/+phones, no tokens/health) at `/admin/reports` + CSV endpoints. Phase 7
 build-parts = `/privacy` (DRAFT wording — review before go-live), per-family cancel/delete (cascades
@@ -188,11 +188,14 @@ guardrail blocks running destructive actions against the **live** site without t
   Excel-safe CSV writer (UTF-8 BOM, CRLF, DD-MM-YYYY text, `+…` phones; export excludes tokens + special
   requirements). `/admin/reports` hub (KPIs + tables + CSV links), `/admin/reports/run-sheet` (print one
   page/driver), `/api/admin/reports/{arrivals,departures,export}.csv`. 9 tests; live-verified BOM + no-token.
-- **Phase 7** — ◑ build-parts DONE (commit `0724a65`): `privacy.ts` (deleteRegistrationCascade + isRetentionDue),
-  `/api/admin/delete-registration` (cancel/delete), per-family Danger zone, `/privacy` (DRAFT), retention
-  reminder on `/admin`, delete-no-PII test. **STILL TO DO:** verify the standing security DoD held on every
-  form (CSRF/escaping/cookie flags/no token in logs); finalise the privacy wording; **restore-tested backup**
-  (export → re-import into a scratch store → confirm counts + a known family opens) + document it in the README.
+- **Phase 7** — ✅ DONE (commits `0724a65` + Phase-7-finish). `privacy.ts` (deleteRegistrationCascade +
+  isRetentionDue + `purgeOperationalPII`), `/api/admin/delete-registration` (cancel/delete), per-family
+  Danger zone, `/privacy` notice (jargon/draft note removed in UAT), retention reminder on `/admin`.
+  **delete-all now also scrubs login-attempt IPs** — no residual PII. **Restore-tested backup:**
+  `test/backup.test.ts` proves export→wipe→import round-trips (counts + a known family reopens) and the
+  raw edit token never appears in an export. **`README.md`** documents run/env, the backup→restore curl
+  procedure, privacy/retention, and a verified **Phase-0 security DoD checklist**. 115 tests. (Open, optional:
+  a friendlier in-UI restore button — currently restore is the token-guarded `/api/admin/data` import.)
 - **Phase 8** — cutover (mostly user/Netlify): real env vars, custom domain + HSTS, `/healthz`, live smoke.
 - **Phase 9** — acceptance walk + dry run with 2–3 real relatives on their phones.
 
