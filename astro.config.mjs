@@ -13,4 +13,8 @@ export default defineConfig({
   output: 'server',
   adapter: netlify(),
   srcDir: './src',
+  // Astro's built-in checkOrigin (default-on) misfires behind Netlify's proxy and 403s every form
+  // POST with "Cross-site POST form submissions are forbidden". We enforce our own double-submit CSRF
+  // token on EVERY POST (src/lib/csrf.ts + admin-api.ts + each endpoint), so this is redundant.
+  security: { checkOrigin: false },
 });
