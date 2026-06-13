@@ -9,7 +9,9 @@ export const POST: APIRoute = async (ctx) => {
   const g = await adminPost(ctx);
   if (g instanceof Response) return g;
 
-  const legIds = (g.form.get('leg_ids') ?? '').toString().split(',').map((s) => s.trim()).filter(Boolean);
+  // Accepts either one comma-joined `leg_ids` (Vehicles "accept suggestion") or many `leg_ids`
+  // checkbox fields (Dispatch board "book selected together"). Flatten + split handles both.
+  const legIds = g.form.getAll('leg_ids').flatMap((v) => v.toString().split(',')).map((s) => s.trim()).filter(Boolean);
   const booking = legIds.length ? await createBookingFromLegIds(legIds, new Date().toISOString()) : null;
   return ctx.redirect(booking ? `/admin/vehicles/${booking.id}` : '/admin/vehicles', 303);
 };

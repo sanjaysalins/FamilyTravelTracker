@@ -27,6 +27,11 @@ Copy `.env.example` → `.env` for local dev; set the real values in the Netlify
 Secrets fail closed: in production the app refuses to start if `ADMIN_PASSWORD_HASH` or
 `SESSION_SECRET` is missing.
 
+> **Local `.env` only:** escape every `$` in a bcrypt hash as `\$` — e.g.
+> `ADMIN_PASSWORD_HASH=\$2a\$10\$...`. Vite's dev/build env loader runs dotenv-expand, which
+> otherwise reads `$2a`/`$10` as variables and silently truncates the hash, breaking admin login.
+> This is local-only; the Netlify dashboard takes the raw hash (no escaping).
+
 | Var | Purpose |
 |---|---|
 | `ADMIN_PASSWORD_HASH` | bcrypt hash of the organiser password (never plaintext) |
