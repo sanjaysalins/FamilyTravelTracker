@@ -1,0 +1,203 @@
+---
+// Pickup Dispatch Board: a per-day, time-sorted timeline of who needs transport. Colour-coded by
+// status (🟠 needs driver / 🔵 booked / 🟢 confirmed). Tick unbooked legs that cluster within ~60 min
+// and "Book selected together" → one shared vehicle (reuses /api/admin/vehicles/create), then assign a
+// driver on the booking page. Vertical mobile-friendly layout (not a horizontal Gantt).
+import Base from '../../layouts/Base.astro';
+import NeedsYou from '../../components/NeedsYou.astro';
+import { config } from '../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
+import { requireSession } from '../../lib/auth';
+import { store } from '../../lib/store';
+import { computeJobs } from '../../lib/tasks';
+import { vehicleLabel } from '../../lib/planner';
+import { humanDate } from '../../lib/dates';
+import type { Registration, TransportLeg, VehicleBooking } from '../../lib/types';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+const [regs, bookings] = await Promise.all([store.listRegistrations(), store.listBookings()]);
+const jobs = computeJobs(regs, bookings);
+const bookingById = new Map(bookings.map((b) => [b.id, b]));
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
+
+const dir: TransportLeg['direction'] = Astro.url.searchParams.get('dir') === 'departure' ? 'departure' : 'arrival';
+
+/** "10:30" -> minutes; anything non-numeric (empty, "approx morning") -> Infinity (sorts last). */
+function toMins(t: string): number {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t.trim());
+  return m ? Number(m[1]) * 60 + Number(m[2]) : Infinity;
+}
+
+interface Row {
+  leg: TransportLeg;
+  surname: string;
+  ref: string;
+  time: string;
+  mins: number;
+  booking: VehicleBooking | null;
+  state: 'need' | 'prog' | 'done';
+}
+
+const all: Row[] = [];
+for (const reg of regs) {
+  for (const leg of reg.legs) {
+    if (!leg.transport_needed || leg.direction !== dir || !leg.travel_date || leg.date_tbc) continue;
+    const time = leg.pickup_time_confirmed || leg.travel_time || '';
+    const booking = leg.vehicle_booking_id ? bookingById.get(leg.vehicle_booking_id) ?? null : null;
+    const state: Row['state'] = leg.status === 'confirmed' ? 'done' : booking ? 'prog' : 'need';
+    all.push({
+      leg,
+      surname: reg.main_contact_surname || reg.main_contact_first || reg.reference_number,
+      ref: reg.reference_number,
+      time,
+      mins: toMins(time),
+      booking,
+      state,
+    });
+  }
+}
+
+const dates = [...new Set(all.map((r) => r.leg.travel_date!))].sort();
+const wanted = Astro.url.searchParams.get('date');
+const date = wanted && dates.includes(wanted) ? wanted : dates[0] ?? null;
+
+const rows = all
+  .filter((r) => r.leg.travel_date === date)
+  .sort((a, b) => a.mins - b.mins || a.surname.localeCompare(b.surname));
+
+// Split the day into clusters wherever the gap between pickups exceeds 60 minutes.
+const clusters: Row[][] = [];
+for (const r of rows) {
+  const last = clusters[clusters.length - 1];
+  const prev = last?.[last.length - 1];
+  const gap = prev && isFinite(r.mins) && isFinite(prev.mins) ? r.mins - prev.mins : Infinity;
+  if (!last || gap > 60) clusters.push([r]);
+  else last.push(r);
+}
+
+function gapLabel(prevMins: number, nextMins: number): string {
+  if (!isFinite(prevMins) || !isFinite(nextMins)) return 'no set time';
+  const d = nextMins - prevMins;
+  const h = Math.floor(d / 60);
+  const m = d % 60;
+  return `${h ? `${h} hr ` : ''}${m ? `${m} min` : ''}`.trim() + ' later';
+}
+
+const dot: Record<Row['state'], string> = { need: '🟠', prog: '🔵', done: '🟢' };
+const chipClass: Record<Row['state'], string> = { need: 'warn', prog: 'plan', done: 'ok' };
+const qDate = date ? `&date=${date}` : '';
+---
+<Base title="Pickup timeline" help={false}>
+  <div class="topbar">
+    <a class="btn small btn-ghost" href="/admin">← What needs you</a>
+    <h1 style="margin:0; font-size:1.25rem">Pickup timeline</h1>
+    <a class="btn small btn-ghost" href="/admin/vehicles">🚐 Vehicles</a>
+  </div>
+
+  <NeedsYou jobs={jobs} />
+
+  <div class="tabs">
+    <a class={`tab ${dir === 'arrival' ? 'active' : ''}`} href={`/admin/dispatch?dir=arrival${qDate}`}>🛬 Arrivals</a>
+    <a class={`tab ${dir === 'departure' ? 'active' : ''}`} href={`/admin/dispatch?dir=departure${qDate}`}>🛫 Departures</a>
+  </div>
+
+  {dates.length === 0 ? (
+    <div class="card"><p class="muted">No {dir === 'arrival' ? 'arrivals' : 'departures'} need transport yet — they appear here once a family gives a travel date.</p></div>
+  ) : (
+    <>
+      <div class="tabs">
+        {dates.map((d) => (
+          <a class={`tab ${d === date ? 'active' : ''}`} href={`/admin/dispatch?dir=${dir}&date=${d}`}>{humanDate(d)}</a>
+        ))}
+      </div>
+
+      <p class="legend">🟠 needs a driver · 🔵 booked / assigned · 🟢 confirmed</p>
+
+      <form id="dispatchForm" method="POST" action="/api/admin/vehicles/create">
+        <input type="hidden" name="csrf_token" value={csrf} />
+
+        <div class="timeline">
+          {clusters.map((cluster, ci) => (
+            <>
+              {ci > 0 && (
+                <div class="gap">{gapLabel(clusters[ci - 1][clusters[ci - 1].length - 1].mins, cluster[0].mins)}</div>
+              )}
+              {cluster.filter((r) => r.state === 'need').length >= 2 && (
+                <p class="sharehint">🚐 {cluster.filter((r) => r.state === 'need').length} families within the hour — tick to put them in one vehicle</p>
+              )}
+              {cluster.map((r) => {
+                const detail = r.state === 'done'
+                  ? `✓ Confirmed${r.leg.driver_name ? ` · ${r.leg.driver_name}` : ''}`
+                  : r.booking
+                    ? `${r.booking.driver_name ? `Driver: ${r.booking.driver_name}` : 'Booked · needs driver'} · ${vehicleLabel(r.booking.vehicle_type)}`
+                    : 'Needs a driver';
+                const body = (
+                  <>
+                    <div style="flex:1">
+                      <div><span class="who">{dot[r.state]} {r.surname}</span> <span class="chip plan">{r.leg.people_on_this_leg} ppl</span></div>
+                      <div class="meta">{r.leg.from_location} → {r.leg.to_location}{r.leg.carrier_ref ? ` · ${r.leg.carrier_ref}` : ''}</div>
+                      <div class="meta"><span class={`chip ${chipClass[r.state]}`}>{detail}</span></div>
+                    </div>
+                  </>
+                );
+                return (
+                  <div class="slot">
+                    <div class="t">{r.time || '—'}</div>
+                    {r.state === 'need' ? (
+                      <label class="ev s-need">
+                        <input type="checkbox" name="leg_ids" value={r.leg.id} />
+                        {body}
+                      </label>
+                    ) : (
+                      <a class={`ev s-${r.state}`} href={`/admin/vehicles/${r.booking?.id}`}>
+                        {body}
+                        <span class="open">›</span>
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          ))}
+        </div>
+
+        <div class="sticky">
+          <div class="inner">
+            <button id="bookBtn" type="submit" class="btn btn-primary" disabled>🚐 Tick some to book</button>
+          </div>
+        </div>
+      </form>
+    </>
+  )}
+</Base>
+
+<style>
+  .legend{font-size:.84rem; color:var(--muted); margin:4px 2px 12px}
+  .sharehint{font-size:.84rem; color:var(--teal-dark); font-weight:600; margin:14px 4px 4px}
+  .timeline .ev.s-need{border-left-color:var(--warn)}
+  .timeline .ev.s-prog{border-left-color:#2B5FB3}
+  .timeline .ev.s-done{border-left-color:var(--ok); background:#F4FBF6}
+  label.ev{display:flex; gap:10px; align-items:flex-start; cursor:pointer}
+  label.ev input{width:20px; height:20px; accent-color:var(--teal); margin-top:3px; flex:0 0 auto}
+  a.ev{display:flex; gap:10px; align-items:flex-start; text-decoration:none; color:var(--ink)}
+  a.ev .open{margin-left:auto; color:var(--muted); font-size:1.3rem; align-self:center}
+  .ev .who{font-weight:700}
+  .ev .meta{margin-top:3px}
+</style>
+
+<script>
+  const form = document.getElementById('dispatchForm');
+  const btn = document.getElementById('bookBtn') as HTMLButtonElement | null;
+  if (form && btn) {
+    const update = () => {
+      const n = form.querySelectorAll('input[name="leg_ids"]:checked').length;
+      btn.disabled = n < 1;
+      btn.textContent = n > 1 ? `🚐 Book ${n} selected together` : n === 1 ? '🚐 Book this pickup' : '🚐 Tick some to book';
+    };
+    form.addEventListener('change', update);
+    update();
+  }
+</script>
