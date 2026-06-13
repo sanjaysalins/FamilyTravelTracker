@@ -10,22 +10,16 @@ review-summary on step 5; admin status-dropdown data bug + "ready to book" count
 over-capacity now blocks confirm; post-send "Emailed ✓" banner; real progress bars; forward-safe run
 sheet (no guest_notes, per-day grouping). **112 tests; build clean.** Pushed (`7dc14d6..b4be53e`) and
 **deploy verified GREEN** on https://bidarplan.netlify.app (cost line, "5 short pages", "How are you
-travelling?", privacy link all confirmed live). **Everything is committed + pushed — `main` is in sync.** at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).
+travelling?", privacy link all confirmed live). Later finished **Phase 7** (restore-tested backup,
+no-PII delete-all, README + security audit) and added **`/healthz`**. **115 tests; everything committed
++ pushed — `main` in sync; deployed at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).**
 
 **▶ PICK UP HERE:** Phases **0 → 7 are DONE** (guest register + edit +
 email + full guided admin + reports/CSV + privacy/delete/retention + restore-tested backup; **115 tests** pass; `npm run build`
 clean) **plus a full UAT fix round (A–F) and Phase 7 finished** — all committed and **live**.
-**NEXT = Phase 8 (cutover — mostly Netlify env + custom domain + /healthz) + Phase 9 (dry run with real relatives).**
-Phase 6 = `reports.ts` (arrivals/departures, seat-demand=sum people, run sheet, chase, headcount) +
-Excel-safe CSV (BOM/DD-MM-YYYY/+phones, no tokens/health) at `/admin/reports` + CSV endpoints. Phase 7
-build-parts = `/privacy` (DRAFT wording — review before go-live), per-family cancel/delete (cascades
-into bookings, leaves no PII), retention reminder on `/admin` after event+`RETENTION_DAYS`.
-Phase 5 built (committed `1cf0023 → c8ac296`, 5 slices): admin auth (signed session, bcrypt login,
-Blobs rate-limit, guard), the **Action Centre** (live job counts + Needs-you strip), all-registrations
-list, per-family wizard + admin edit, the **vehicle planner** (60-min clustering → suggested bookings),
-the **assign-driver** + **confirm-&-email** one-at-a-time flows (confirm sends the Phase-4 cost-free
-email + offers a wa.me twin, auto-confirms a family when all its transport legs are confirmed), the
-email log and settings (JSON export + delete-all). Reports hub is a placeholder until Phase 6.
+**NEXT = Phase 8 (cutover — Netlify env vars + optional custom domain/HSTS + live smoke; `/healthz` already
+built) + Phase 9 (dry run with real relatives).**
+(Per-phase detail is in the "Then, in order" list below; UAT detail in `UAT-FINDINGS.md`.)
 
 **Resend is now WORKING** locally (real ack + confirmation emails verified to the test inbox).
 Still open for the **user, in Netlify env** (local `.env` already has placeholders): set the real
