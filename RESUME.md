@@ -1,10 +1,10 @@
 # RESUME — Family Travel Coordinator
 
-**Last worked:** 2026-06-13 (local-test session + started a NEW "Pickup Dispatch Board" feature — IN PROGRESS, see next block). Phases 0–7 complete + UAT round A–F; only cutover + dry-run left. **LIVE on Netlify**
+**Last worked:** 2026-06-13 (local-test session + shipped a NEW "Pickup Dispatch Board" — DONE, see next block). Phases 0–7 complete + UAT round A–F; only cutover + dry-run left. **LIVE on Netlify**
 
 ---
 
-## ▶▶ SESSION 2026-06-13b — local test + NEW dispatch board (RESUME HERE)
+## ▶▶ SESSION 2026-06-13b — local test + NEW dispatch board (DONE, pushed)
 
 **Ran it locally.** `npm run dev` → http://localhost:4321. Seeded 8 fake families into the dev store
 via `POST /api/admin/data` (header `x-admin-token: <SESSION_SECRET, currently "c">`, body
@@ -17,30 +17,25 @@ failed locally. **FIX: escape every `$` as `\$` in local `.env` ONLY** →
 `ADMIN_PASSWORD_HASH=\$2a\$10\$XOI…`. Production/Netlify unaffected (no dotenv there). **Documented in
 `README.md`** (Environment variables section). The `CLAUDE.md` diff is just a stray-`claude` typo cleanup.
 
-**NEW FEATURE (user request) — `/admin/dispatch` "Pickup Dispatch Board", IN PROGRESS.** A per-day
-timeline of who needs a pickup, sorted by time. **Decided design:** vertical mobile-friendly time-list
-(NOT a horizontal Gantt); **arrivals + departures** with a `?dir=arrival|departure` toggle; colour-coded
-by status (🟠 needs driver / 🔵 booked-or-assigned / 🟢 confirmed); tick several legs that cluster within
-~60 min → **"Book selected together"** → one shared vehicle, then assign the driver. Click a booked row →
-straight to its booking.
+**NEW FEATURE (user request) — `/admin/dispatch` "Pickup Dispatch Board", DONE (commits `4309551` +
+`3d10f49`, pushed → live).** A per-day timeline of who needs a pickup, sorted by time. Vertical
+mobile-friendly time-list (NOT a Gantt); **arrivals + departures** via `?dir=arrival|departure`; day tabs
+built from the dates present; >60-min gap dividers + a "N families within the hour" share hint; colour by
+status (🟠 needs driver / 🔵 booked-or-assigned / 🟢 confirmed). Tick the unbooked legs that cluster
+together → **"Book selected together"** → one shared vehicle, then assign the driver. Booked rows link
+straight to their booking.
 
-- **DONE:** `src/pages/api/admin/vehicles/create.ts` now accepts MANY `leg_ids` checkbox fields (was a
-  single comma-string) via `form.getAll('leg_ids').flatMap((v)=>v.toString().split(','))` — backward
-  compatible with the Vehicles "accept suggestion" form. The backend `createBookingFromLegIds(legIds,
-  now)` (`vehicles.ts:80`) already existed and is reused as-is; the endpoint redirects to
-  `/admin/vehicles/{id}` (where the driver is assigned).
-- **TODO to finish:**
-  1. Build **`src/pages/admin/dispatch.astro`**: `requireSession` guard + `<NeedsYou>`; read
-     `regs`+`bookings`; flatten transport-needed legs filtered by direction (`?dir`) + date (`?date`);
-     **day tabs** from the dates present; sort by `pickup_time_confirmed || travel_time`; split runs by
-     >60-min gaps (reuse the `.gap` divider + `.timeline .slot/.t/.ev` + `.chip` CSS). Unbooked rows =
-     `<label>` wrapping a checkbox `name="leg_ids" value={leg.id}` inside ONE `<form method="POST"
-     action="/api/admin/vehicles/create">` (+ `csrf_token`); booked rows = `<a href="/admin/vehicles/
-     {leg.vehicle_booking_id}">`. Status colour via a small scoped `<style>` (`.ev.s-need`=warn,
-     `.s-prog`=blue, `.s-done`=ok). Sticky **"Book N selected together"** button (tiny JS to count +
-     enable/disable). Reuse `humanDate`, `vehicleLabel`, `computeJobs`, `CSRF_COOKIE`/`issueCsrf`.
-  2. Add a nav link on `/admin` (`src/pages/admin/index.astro` card) → `📅 Pickup timeline`.
-  3. `npm run build` + `npm test` + live-verify the grouping end-to-end.
+- `src/pages/admin/dispatch.astro` — the page. `src/pages/admin/index.astro` — `📅 Pickup timeline` nav
+  link. `src/pages/api/admin/vehicles/create.ts` — now accepts MANY `leg_ids` checkbox fields (was a
+  single comma-string) via `form.getAll('leg_ids').flatMap((v)=>v.toString().split(','))`, backward
+  compatible with the Vehicles "accept suggestion" form. Reuses the existing `createBookingFromLegIds`
+  (`vehicles.ts:80`), which rebuilds the cluster + validates same-date+route server-side; endpoint
+  redirects to `/admin/vehicles/{id}` to assign the driver.
+- `test/dispatch.test.ts` — proves grouping (one booking covers all, back-links each leg), the mixed-route
+  guard, and the not-plannable→null case. **118 tests; build clean. Verified live end-to-end** (ticked 2
+  → VEH created covering both → rows flipped 🟠→🔵 + became clickable).
+- NOTE (seed quirk, not a bug): seeded *duplicate* families reuse leg id `leg-1`, so leg ids collide in
+  fake data — real registrations get unique UUIDs, so on the live site each tick maps to exactly one leg.
 
 ---
 
