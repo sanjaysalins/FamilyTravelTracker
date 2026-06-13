@@ -196,7 +196,9 @@ guardrail blocks running destructive actions against the **live** site without t
   raw edit token never appears in an export. **`README.md`** documents run/env, the backup→restore curl
   procedure, privacy/retention, and a verified **Phase-0 security DoD checklist**. 115 tests. (Open, optional:
   a friendlier in-UI restore button — currently restore is the token-guarded `/api/admin/data` import.)
-- **Phase 8** — cutover (mostly user/Netlify): real env vars, custom domain + HSTS, `/healthz`, live smoke.
+- **Phase 8** — cutover (mostly user/Netlify): real env vars, custom domain + HSTS, live smoke.
+  **`/healthz` DONE** (commit `42f49ef`) — round-trips the Blobs store, returns 200/503; point an uptime
+  monitor (e.g. UptimeRobot) at `https://bidarplan.netlify.app/healthz`. Remaining Phase 8 = user/Netlify.
 - **Phase 9** — acceptance walk + dry run with 2–3 real relatives on their phones.
 
 ## Watch-outs (from the plan review — already baked into the plan)
