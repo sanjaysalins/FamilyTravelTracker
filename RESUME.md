@@ -1,6 +1,6 @@
 # RESUME — Family Travel Coordinator
 
-**Last worked:** 2026-06-15 (Phase 8 cutover — imported prod env vars into Netlify; forced a fresh CI/CD build via this commit so the functions pick up the new env). Phases 0–7 complete + UAT round A–F; only cutover smoke-test + dry-run left. **LIVE on Netlify**
+**Last worked:** 2026-06-15 (Phase 8 cutover — switched email to **Gmail SMTP** since Resend refuses gmail senders; imported prod env vars into Netlify; 120 tests). Phases 0–7 complete + UAT round A–F; only cutover smoke-test + dry-run left. **LIVE on Netlify**
 
 ---
 
