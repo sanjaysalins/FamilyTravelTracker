@@ -28,6 +28,12 @@ export const config = {
   emailFrom: optional('EMAIL_FROM', 'Family Travel Coordinator <noreply@example.com>'),
   testEmailRecipient: optional('TEST_EMAIL_RECIPIENT'),
 
+  // SMTP transport (e.g. Gmail). Takes priority over Resend when SMTP_HOST is set.
+  smtpHost: optional('SMTP_HOST'),
+  smtpPort: Number(optional('SMTP_PORT', '465')),
+  smtpUser: optional('SMTP_USER'),
+  smtpPass: optional('SMTP_PASS'),
+
   timezone: optional('DEFAULT_TIMEZONE', 'Asia/Kolkata'),
   phoneRegion: optional('DEFAULT_PHONE_REGION', 'IN'),
   editTokenExpiryDays: Number(optional('EDIT_TOKEN_EXPIRY_DAYS', '30')),

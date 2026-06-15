@@ -25,10 +25,35 @@ export function eventInfo(): EventInfo {
   };
 }
 
+/** SMTP send via nodemailer (e.g. Gmail). Returns null on success, or a short error string. */
+async function deliverSmtp(to: string, content: EmailContent): Promise<string | null> {
+  try {
+    const nodemailer = (await import('nodemailer')).default;
+    const transport = nodemailer.createTransport({
+      host: config.smtpHost,
+      port: config.smtpPort,
+      secure: config.smtpPort === 465, // 465 = implicit TLS, 587 = STARTTLS
+      auth: { user: config.smtpUser, pass: config.smtpPass },
+    });
+    await transport.sendMail({
+      from: config.emailFrom,
+      to,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+    });
+    return null;
+  } catch (err) {
+    return `smtp: ${err instanceof Error ? err.message : String(err)}`;
+  }
+}
+
 /** Low-level send. Returns null on success, or a short error string on failure.
- *  Returns a "skipped" reason (still a failure) when not configured to actually send. */
+ *  Returns a "skipped" reason (still a failure) when not configured to actually send.
+ *  SMTP (SMTP_HOST) takes priority over Resend (RESEND_API_KEY). */
 async function deliver(to: string, content: EmailContent): Promise<string | null> {
-  if (!config.resendApiKey) return 'skipped: RESEND_API_KEY not set';
+  if (config.smtpHost) return deliverSmtp(to, content);
+  if (!config.resendApiKey) return 'skipped: no email transport (set SMTP_HOST or RESEND_API_KEY)';
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
