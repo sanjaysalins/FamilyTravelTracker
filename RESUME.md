@@ -1,6 +1,27 @@
 # RESUME — Family Travel Coordinator
 
-**Last worked:** 2026-06-15 (Phase 8 cutover — switched email to **Gmail SMTP** since Resend refuses gmail senders; imported prod env vars into Netlify; 120 tests). Phases 0–7 complete + UAT round A–F; only cutover smoke-test + dry-run left. **LIVE on Netlify**
+**Last worked:** 2026-06-15 (**Phase 8 cutover — DONE**; email live via Gmail SMTP; 120 tests). Phases 0–8 complete + UAT round A–F. **Only Phase 9 (dry-run with real relatives) left.** **LIVE on Netlify**
+
+---
+
+## ▶▶ SESSION 2026-06-15 — Phase 8 cutover DONE (email live via Gmail SMTP)
+
+**Phase 8 is complete.** Prod env imported to Netlify + email proven working live.
+
+- **Email switched to Gmail SMTP** (commit `bf4fc63`): Resend refuses `@gmail.com` senders
+  (`403 gmail.com not verified`), and the from-address is `bidartrip26@gmail.com`. So `src/lib/email.ts`
+  `deliver()` now uses nodemailer when `SMTP_HOST` is set (priority over Resend, which stays as fallback).
+  Config in `src/lib/config.ts`; test `test/email-smtp.test.ts`. **120 tests, build clean.**
+- **Prod env (Netlify):** `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=bidartrip26@gmail.com`,
+  `SMTP_PASS=<gmail app password>`, `EMAIL_FROM=Bidar Plan <bidartrip26@gmail.com>`. Admin pw still `bidar2026`.
+  **`TEST_EMAIL_RECIPIENT` removed** → each family now gets their own mail.
+- **Verified live end-to-end:** a real registration's ack shows `status: sent` in `/admin/email-log`;
+  re-sent the ack to the two relatives who'd failed under the old config (sundeep BDAY-2026-0001,
+  Serina BDAY-2026-0002) via `/api/find` → both `sent`. (New automated sender may land in Spam first.)
+- **Two gotchas learned:** (1) Netlify "import from .env" does **not overwrite existing keys** — had to
+  overwrite `EMAIL_FROM`/`ADMIN_PASSWORD_HASH` by hand. (2) The Netlify **"Trigger deploy" button only
+  works if you pick an option from its dropdown** ("Clear cache and deploy site") — a bare click does
+  nothing, which is why early env edits didn't go live until a git push forced a build.
 
 ---
 
@@ -51,11 +72,11 @@ travelling?", privacy link all confirmed live). Later finished **Phase 7** (rest
 no-PII delete-all, README + security audit) and added **`/healthz`**. **115 tests; everything committed
 + pushed — `main` in sync; deployed at https://bidarplan.netlify.app (GitHub→Netlify CI/CD).**
 
-**▶ PICK UP HERE:** Phases **0 → 7 are DONE** (guest register + edit +
-email + full guided admin + reports/CSV + privacy/delete/retention + restore-tested backup; **115 tests** pass; `npm run build`
-clean) **plus a full UAT fix round (A–F) and Phase 7 finished** — all committed and **live**.
-**NEXT = Phase 8 (cutover — Netlify env vars + optional custom domain/HSTS + live smoke; `/healthz` already
-built) + Phase 9 (dry run with real relatives).**
+**▶ PICK UP HERE:** Phases **0 → 8 are DONE** (guest register + edit +
+email + full guided admin + reports/CSV + privacy/delete/retention + restore-tested backup; **120 tests** pass; `npm run build`
+clean) **plus a full UAT fix round (A–F), Phase 7, and Phase 8 cutover (email live via Gmail SMTP)** — all committed and **live**.
+**NEXT = Phase 9 ONLY (dry run with real relatives on their phones).** (Optional Phase 8 extras still
+available if wanted: custom domain + HSTS; uptime monitor on `/healthz`.)
 (Per-phase detail is in the "Then, in order" list below; UAT detail in `UAT-FINDINGS.md`.)
 
 **Resend is now WORKING** locally (real ack + confirmation emails verified to the test inbox).
@@ -227,9 +248,10 @@ guardrail blocks running destructive actions against the **live** site without t
   raw edit token never appears in an export. **`README.md`** documents run/env, the backup→restore curl
   procedure, privacy/retention, and a verified **Phase-0 security DoD checklist**. 115 tests. (Open, optional:
   a friendlier in-UI restore button — currently restore is the token-guarded `/api/admin/data` import.)
-- **Phase 8** — cutover (mostly user/Netlify): real env vars, custom domain + HSTS, live smoke.
-  **`/healthz` DONE** (commit `42f49ef`) — round-trips the Blobs store, returns 200/503; point an uptime
-  monitor (e.g. UptimeRobot) at `https://bidarplan.netlify.app/healthz`. Remaining Phase 8 = user/Netlify.
+- **Phase 8 — DONE (2026-06-15).** Prod env imported to Netlify; **email live via Gmail SMTP**
+  (`TEST_EMAIL_RECIPIENT` removed; both prior-failed relatives re-sent). `/healthz` DONE (commit
+  `42f49ef`) — round-trips the Blobs store, returns 200/503; an uptime monitor (e.g. UptimeRobot) on
+  `https://bidarplan.netlify.app/healthz` is still optional. Optional extras left: custom domain + HSTS.
 - **Phase 9** — acceptance walk + dry run with 2–3 real relatives on their phones.
 
 ## Watch-outs (from the plan review — already baked into the plan)
