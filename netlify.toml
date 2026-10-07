@@ -4,3 +4,10 @@
 
 # Astro's Netlify adapter generates the serverless functions and edge config.
 # Netlify Blobs is wired in automatically for this site's functions — no connection string.
+
+# Old static pickup link -> the live, editable page
+[[redirects]]
+  from = "/pickups.html"
+  to = "/pickups"
+  status = 301
+  force = true
