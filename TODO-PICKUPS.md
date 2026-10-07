@@ -1,20 +1,21 @@
-# TODO: Pickup page (https://bidarplan.netlify.app/pickups.html)
+# TODO: Pickup page (https://bidarplan.netlify.app/pickups)
 
-File: `public/pickups.html` (static; data is the `P` array near the top of the script).
+Always `git pull` before editing.
+
+## How it works now
+- `/pickups` is server-rendered from `src/lib/pickups.ts` (plan data) + saved driver details (Blobs `system` store, key `pickup_drivers`).
+- Driver company: `/driver` login (shared password) -> edits driver name, phone, car reg per pickup. Family sees changes instantly.
+- Organiser: when logged in to `/admin`, `/pickups` also shows "Edit driver" and a "Set the driver company password" box.
+- Old link `/pickups.html` redirects to `/pickups`.
 
 ## Open items
-- [ ] Add **driver name, phone and car reg** per pickup as soon as they are confirmed (every row shows Driver: TBC).
-      Row format: `[group, place, family, day, weekday, "h:mm AM/PM", people, car type, [contacts], [driver name, driver phone, car reg]]`
-      (the driver part is index 9; page currently shows name + phone only, add car reg to the render).
+- [ ] **Organiser: log in at /admin, open /pickups, "Set the driver company password"**, then give the driver company the `/driver` link + password.
+- [ ] Driver company fills in driver name / phone / car reg for each pickup (all show TBC until then).
 - [ ] Confirm contacts marked "Contact to be confirmed": Tanu + 2, Mali, Rani's sister, Chotu + Jaswanth, Thamma Fly, Indu, Dr Sam + Beneita.
 - [ ] Check names not found in the registrations backup: Tanu (Tanya?), Sughandi, Katherin Aunty, Leena, Boby, Beneita, Pastor Joe, Mali.
 - [ ] Check head-counts: Anil and Sanjay (page 6, registration 9); Boby + Serina (2, registration 10).
-- [ ] Group numbers are auto-set by time order (1..19). Old Grp numbers are retired; tell people to use family name.
-- [ ] Decide: move driver entry into the admin app (see below) instead of editing the HTML by hand.
-
-## Admin app
-Existing admin (`/admin/vehicles`, `/admin/assign`) already stores driver_name, driver_phone and vehicle_reg per booking,
-but it is separate from this static page. Linking them needs the page to be server-rendered from vehicle bookings.
+- [ ] Changing the plan itself (times, families, contacts) still means editing `src/lib/pickups.ts` and pushing.
+- [ ] Group numbers are auto-set by time order (1..19). Old Grp numbers are retired; tell people to use the family name.
 
 ## Notes
 - Page is public and lists 26 people's phones and emails (owner chose this on 2026-10-07).

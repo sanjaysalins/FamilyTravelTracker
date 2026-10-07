@@ -1,0 +1,134 @@
+---
+// Public pickup plan. Same page for everyone; the driver company (driver login) and the organiser
+// (admin login) also see an "Edit driver" form on each pickup. Saved driver details show for all.
+import css from '../styles/pickups.css?raw';
+import { config } from '../lib/config';
+import { store } from '../lib/store';
+import { CSRF_COOKIE, issueCsrf } from '../lib/csrf';
+import { editorRole } from '../lib/driver-auth';
+import { DRIVERS_KEY, contactsSorted, orderedPickups, time24, type DriverMap } from '../lib/pickups';
+
+export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'no-store');
+
+const role = editorRole(Astro.cookies, new Date());
+const drivers = (await store.getSystem<DriverMap>(DRIVERS_KEY)) ?? {};
+const list = orderedPickups();
+const days = [...new Set(list.map((p) => p.day))];
+const contacts = contactsSorted();
+
+let csrf = '';
+if (role) {
+  csrf = issueCsrf();
+  Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
+}
+const pwSet = Astro.url.searchParams.get('pw') === 'set';
+const stamp = (iso: string) => new Date(iso).toLocaleString('en-GB', { timeZone: config.timezone, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Bidar Pickup Plan</title>
+  <style set:html={css}></style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Bidar Pickup Plan</h1>
+  <p class="sub">Sybil's 60th birthday, 12 to 17 October 2026. Find your day, your time and who to call.</p>
+
+  <div class="now"><span id="nowd"></span><b id="nowt"></b></div>
+
+  {role && (
+    <div class="bar">
+      <span>{role === 'admin' ? 'Organiser' : 'Driver company'}: you can edit driver details below.</span>
+      {role === 'driver' && (
+        <form method="POST" action="/api/pickups/logout"><input type="hidden" name="csrf_token" value={csrf} /><button class="btn ghost" type="submit">Log out</button></form>
+      )}
+    </div>
+  )}
+  {role === 'admin' && (
+    <details class="edit" style="margin:-4px 0 16px">
+      <summary>Set the driver company password</summary>
+      {pwSet && <div class="ok">Driver password saved.</div>}
+      <form method="POST" action="/api/pickups/set-password" class="pw">
+        <input type="hidden" name="csrf_token" value={csrf} />
+        <input id="driverpw" name="password" type="text" minlength="8" required placeholder="New password (8+ characters)" autocomplete="off" aria-label="New driver company password">
+        <button class="btn" type="submit">Save password</button>
+      </form>
+    </details>
+  )}
+
+  <nav>
+    {days.map((d) => <a href={`#d${d}`}>{d} Oct</a>)}
+    <a href="#contacts">All contacts</a>
+    {!role && <a href="/driver">Driver login</a>}
+  </nav>
+
+  {days.map((d) => {
+    const items = list.filter((p) => p.day === d);
+    const total = items.reduce((a, p) => a + p.people, 0);
+    return (
+      <section class="day" id={`d${d}`}>
+        <div class="dayhead"><h2>{items[0].weekday} {d} October</h2><span>{items.length} pickups, {total} people</span></div>
+        {items.map((p) => {
+          const dr = drivers[p.id];
+          return (
+            <div class="card" id={p.id}>
+              <div class="time">{time24(p.time)}<small>Grp {p.group}</small></div>
+              <div>
+                <div class="place">{p.place}</div>
+                <div class="who">{p.family}</div>
+                <div class="meta"><span class="chip">{p.people} {p.people === 1 ? 'person' : 'people'}</span><span class="chip">{p.car}</span></div>
+                {p.contacts.length
+                  ? p.contacts.map((c) => <div class="contact"><b>{c.name}</b> {c.phone}</div>)
+                  : <span class="tbc">Contact to be confirmed</span>}
+                <div class="driver">
+                  <span class="lbl">Driver</span>
+                  {dr
+                    ? <><b>{dr.name || 'TBC'}</b> {dr.phone}{dr.reg && <> · <b>{dr.reg}</b></>}<span class="upd">updated {stamp(dr.updated_at)}</span></>
+                    : 'TBC'}
+                </div>
+                {role && (
+                  <details class="edit">
+                    <summary>Edit driver</summary>
+                    <form method="POST" action="/api/pickups/save">
+                      <input type="hidden" name="csrf_token" value={csrf} />
+                      <input type="hidden" name="id" value={p.id} />
+                      <label for={`n-${p.id}`}>Driver name<input id={`n-${p.id}`} name="name" maxlength="80" value={dr?.name ?? ''} autocomplete="off"></label>
+                      <label for={`p-${p.id}`}>Driver phone<input id={`p-${p.id}`} name="phone" maxlength="40" inputmode="tel" value={dr?.phone ?? ''} placeholder="+91 ..." autocomplete="off"></label>
+                      <label for={`r-${p.id}`}>Car registration<input id={`r-${p.id}`} name="reg" maxlength="20" value={dr?.reg ?? ''} placeholder="KA 38 B 1234" autocomplete="off"></label>
+                      <button class="btn" type="submit">Save</button>
+                    </form>
+                  </details>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </section>
+    );
+  })}
+
+  <h2 class="list" id="contacts">All contacts, A to Z</h2>
+  <input id="q" type="search" placeholder="Search by name, phone or email" aria-label="Search contacts">
+  <div class="tablebox"><table><thead><tr><th>Name</th><th>Phone / WhatsApp</th><th>Email</th></tr></thead>
+    <tbody id="rows">
+      {contacts.map((r) => <tr><td>{r[0]}</td><td class="num">{r[1]}</td><td style="overflow-wrap:anywhere">{r[2]}</td></tr>)}
+    </tbody></table></div>
+  <p class="foot">Times are arrival times. Driver names and numbers are added once confirmed. Rows marked "Contact to be confirmed" are still being checked.</p>
+</div>
+<script is:inline>
+function tick(){var n=new Date();
+  document.getElementById("nowd").textContent=n.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  document.getElementById("nowt").textContent=n.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false})}
+tick();setInterval(tick,1000);
+document.getElementById("q").addEventListener("input",function(e){
+  var f=e.target.value.toLowerCase();
+  document.querySelectorAll("#rows tr").forEach(function(r){r.hidden=r.textContent.toLowerCase().indexOf(f)<0});
+});
+</script>
+</body>
+</html>

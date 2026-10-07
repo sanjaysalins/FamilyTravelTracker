@@ -1,0 +1,48 @@
+---
+// Driver-company login. On success they land on /pickups with "Edit driver" on every pickup.
+import css from '../../styles/pickups.css?raw';
+import { config } from '../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
+import { editorRole } from '../../lib/driver-auth';
+
+export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'no-store');
+
+if (editorRole(Astro.cookies, new Date())) return Astro.redirect('/pickups');
+
+let error = '';
+const flash = Astro.cookies.get('ftc_driver_err')?.value;
+if (flash) {
+  error = flash === 'locked' ? 'Too many attempts. Please wait a minute and try again.'
+    : flash === 'unset' ? 'Driver login is not set up yet. Ask the organiser.'
+    : 'Incorrect password.';
+  Astro.cookies.delete('ftc_driver_err', { path: '/' });
+}
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex">
+  <title>Driver login</title>
+  <style set:html={css}></style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Driver login</h1>
+  <p class="sub">For the driver company. Log in to add driver names, phone numbers and car registrations.</p>
+  <form class="card login" method="POST" action="/api/pickups/login">
+    <input type="hidden" name="csrf_token" value={csrf} />
+    {error && <div class="err">{error}</div>}
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+    <button class="btn" type="submit">Log in</button>
+  </form>
+  <p class="foot"><a href="/pickups">Back to the pickup plan</a></p>
+</div>
+</body>
+</html>
