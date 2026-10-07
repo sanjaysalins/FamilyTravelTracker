@@ -1,5 +1,27 @@
 # RESUME — Family Travel Coordinator
 
+**ALWAYS `git pull` first.** Working clone: GitHub `sanjaysalins/FamilyTravelTracker` (`E:\backup\2026\slk\FamilyTravelTracker` has NO .git; `F:\slk\PycharmProjects\FamilyTravelTracker` does).
+
+---
+
+## ▶▶ SESSION 2026-10-07 — Pickup page + driver-company editing (LIVE) — PICK UP HERE TOMORROW
+
+**Live:** https://bidarplan.netlify.app/pickups (public; old `/pickups.html` 301-redirects). Commits `0ee27e3` → `8950505`. 130 tests, build clean.
+
+- **What it is:** 19 pickups (12-17 Oct) in time order, auto-numbered Grp 1..19, 24h times, live clock (viewer's device), A-Z contact list + search. Plan data lives in `src/lib/pickups.ts` (edit + push to change times/families/contacts). Names spell-checked against `family-travel-backup.json`.
+- **Driver details:** driver company logs in at **/driver** (shared password) → "Edit driver" per pickup (name, phone, car reg) → everyone sees it instantly with an "updated" time. Organiser (admin login) can edit too and sets the driver password on /pickups ("Set the driver company password"). Saved in Blobs `system` key `pickup_drivers`; password hash in `driver_password_hash`. Files: `src/lib/driver-auth.ts`, `src/pages/pickups.astro`, `src/pages/driver/index.astro`, `src/pages/api/pickups/{save,login,logout,set-password}.ts`, `src/styles/pickups.css`, `test/pickups.test.ts`.
+- **Tested locally end-to-end** (admin sets pw → driver login → save → public sees; CSRF/no-session/driver-on-admin all refused). **Live site only smoke-checked** (pages load, redirect works), not yet logged in on live.
+
+**TOMORROW, in order:**
+1. Log in at /admin/login → open /pickups → set the driver company password → send the driver company `/driver` + password; do one real save on live to confirm.
+2. Fill the "Contact to be confirmed" rows: Tanu + 2, Mali, Rani's sister, Chotu + Jaswanth, Thamma Fly, Indu, Dr Sam + Beneita.
+3. Fix names not in the registrations file: Tanu (Tanya?), Sughandi, Katherin Aunty, Leena, Boby, Beneita, Pastor Joe, Mali. Check head-counts: Anil+Sanjay (page 6 vs reg 9), Boby+Serina (2 vs reg 10).
+4. Decisions still open: show driver phone + car reg publicly (currently yes); page is public with 26 people's phones/emails (owner chose); optional `noindex`.
+5. Create the WhatsApp group (invite link, admin-only messages, approve new participants, pin /pickups link). Detail list: `TODO-PICKUPS.md`.
+6. Phase 9 dry run with real relatives is still outstanding (event 16 Oct).
+
+---
+
 **Last worked:** 2026-10-07 (pickup page + driver editing, see top section); earlier 2026-06-15 (**Phase 8 cutover — DONE**; email live via Gmail SMTP; 120 tests). Phases 0–8 complete + UAT round A–F. **Only Phase 9 (dry-run with real relatives) left.** **LIVE on Netlify**
 
 ---
