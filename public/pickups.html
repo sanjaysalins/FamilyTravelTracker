@@ -123,7 +123,8 @@ var C=[
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function mins(t){var m=t.match(/(\d+):(\d+) (AM|PM)/),h=+m[1]%12;return (h+(m[3]=="PM"?12:0))*60+ +m[2]}
 function t24(t){var m=mins(t);return ("0"+Math.floor(m/60)).slice(-2)+":"+("0"+m%60).slice(-2)}
-P.sort(function(a,b){return (+a[3]-+b[3])||(mins(a[5])-mins(b[5]))});
+P.sort(function(a,b){return (+a[3]-+b[3])||(mins(a[5])-mins(b[5]))||(+a[0].slice(4)-+b[0].slice(4))});
+P.forEach(function(p,i){p[0]="Grp "+(i+1)});
 var days=[],byDay={};
 P.forEach(function(p){if(!byDay[p[3]]){byDay[p[3]]=[];days.push(p[3])}byDay[p[3]].push(p)});
 document.getElementById("nav").innerHTML=days.map(function(d){return '<a href="#d'+d+'">'+d+' Oct</a>'}).join("")+'<a href="#contacts">All contacts</a>';
