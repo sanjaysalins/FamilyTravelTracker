@@ -1,6 +1,6 @@
 # RESUME — Family Travel Coordinator
 
-**Last worked:** 2026-06-15 (**Phase 8 cutover — DONE**; email live via Gmail SMTP; 120 tests). Phases 0–8 complete + UAT round A–F. **Only Phase 9 (dry-run with real relatives) left.** **LIVE on Netlify**
+**Last worked:** 2026-10-07 (pickup page + driver editing, see top section); earlier 2026-06-15 (**Phase 8 cutover — DONE**; email live via Gmail SMTP; 120 tests). Phases 0–8 complete + UAT round A–F. **Only Phase 9 (dry-run with real relatives) left.** **LIVE on Netlify**
 
 ---
 
