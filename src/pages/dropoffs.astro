@@ -1,0 +1,77 @@
+---
+// Public drop-off (leaving party) plan. Same look as /pickups, read-only, no login. Mobile friendly
+// (shares pickups.css: single column under 480px, scrollable contacts table).
+import css from '../styles/pickups.css?raw';
+import { contactsSorted, time24 } from '../lib/pickups';
+import { orderedDropoffs } from '../lib/dropoffs';
+
+const list = orderedDropoffs();
+const days = [...new Set(list.map((p) => p.day))];
+const contacts = contactsSorted();
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Bidar Drop-off Plan</title>
+  <style set:html={css}></style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Bidar Drop-off Plan</h1>
+  <p class="sub">Sybil's 60th birthday, leaving party, 18 to 21 October 2026. Find your day, your time and who to call.</p>
+
+  <div class="now"><span id="nowd"></span><b id="nowt"></b></div>
+
+  <nav>
+    {days.map((d) => <a href={`#d${d}`}>{d} Oct</a>)}
+    <a href="#contacts">All contacts</a>
+    <a href="/pickups">Pickup plan</a>
+  </nav>
+
+  {days.map((d) => {
+    const items = list.filter((p) => p.day === d);
+    const total = items.reduce((a, p) => a + p.people, 0);
+    return (
+      <section class="day" id={`d${d}`}>
+        <div class="dayhead"><h2>{items[0].weekday} {d} October</h2><span>{items.length} drop-offs, {total} people</span></div>
+        {items.map((p) => (
+          <div class="card" id={p.id}>
+            <div class="time">{time24(p.time)}<small>Grp {p.group}</small></div>
+            <div>
+              <div class="place">{p.place}</div>
+              <div class="who">{p.family}</div>
+              <div class="meta"><span class="chip">{p.people} {p.people === 1 ? 'person' : 'people'}</span><span class="chip">{p.car}</span></div>
+              {p.contacts.length
+                ? p.contacts.map((c) => <div class="contact"><b>{c.name}</b> {c.phone}</div>)
+                : <span class="tbc">Contact to be confirmed</span>}
+              <div class="driver"><span class="lbl">Driver</span> TBC</div>
+            </div>
+          </div>
+        ))}
+      </section>
+    );
+  })}
+
+  <h2 class="list" id="contacts">All contacts, A to Z</h2>
+  <input id="q" type="search" placeholder="Search by name, phone or email" aria-label="Search contacts">
+  <div class="tablebox"><table><thead><tr><th>Name</th><th>Phone / WhatsApp</th><th>Email</th></tr></thead>
+    <tbody id="rows">
+      {contacts.map((r) => <tr><td>{r[0]}</td><td class="num">{r[1]}</td><td style="overflow-wrap:anywhere">{r[2]}</td></tr>)}
+    </tbody></table></div>
+  <p class="foot">Times are from the organiser's sheet. Driver names and numbers are added once confirmed. Rows marked "Contact to be confirmed" are still being checked.</p>
+</div>
+<script is:inline>
+function tick(){var n=new Date();
+  document.getElementById("nowd").textContent=n.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  document.getElementById("nowt").textContent=n.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false})}
+tick();setInterval(tick,1000);
+document.getElementById("q").addEventListener("input",function(e){
+  var f=e.target.value.toLowerCase();
+  document.querySelectorAll("#rows tr").forEach(function(r){r.hidden=r.textContent.toLowerCase().indexOf(f)<0});
+});
+</script>
+</body>
+</html>

@@ -22,7 +22,10 @@ const statusChip: Record<string, string> = { confirmed: 'ok', planned: 'plan', r
   <div class="topbar">
     <a class="btn small btn-ghost" href="/admin">← What needs you</a>
     <h1 style="margin:0; font-size:1.25rem">Reports &amp; driver plan</h1>
-    <a class="btn small btn-ghost" href="/admin/reports/run-sheet">🧑‍✈️ Run sheet (print)</a>
+    <span>
+      <a class="btn small btn-ghost" href="/admin/reports/dropoff">🛫 Drop-off sheet</a>
+      <a class="btn small btn-ghost" href="/admin/reports/run-sheet">🧑‍✈️ Run sheet (print)</a>
+    </span>
   </div>
   <NeedsYou jobs={jobs} />
 

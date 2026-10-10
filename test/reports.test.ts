@@ -1,7 +1,7 @@
 // Phase 6 — report builders + Excel-safe CSV (pure).
 
 import { describe, expect, it } from 'vitest';
-import { schedule, seatDemand, runSheets, chaseList, headcount, toCsv, exportCsv, scheduleCsv } from '../src/lib/reports';
+import { schedule, seatDemand, runSheets, chaseList, headcount, toCsv, exportCsv, scheduleCsv, dropoffSheet, dropoffCsv } from '../src/lib/reports';
 import { buildRegistration, type BuildInput } from '../src/lib/registration-form';
 import type { Registration, VehicleBooking } from '../src/lib/types';
 
@@ -108,5 +108,20 @@ describe('Excel-safe CSV', () => {
   it('scheduleCsv writes the expected header row', () => {
     const csv = scheduleCsv(schedule([reg({}, 'BDAY-2026-0001')], [], 'arrival'));
     expect(csv).toContain('Date,Time (IST),Guest,People,Route,Carrier ref,Driver,Vehicle,Pickup point,Status');
+  });
+});
+
+describe('dropoffSheet', () => {
+  it('numbers departure legs by date/time and carries leader, contact and no guest notes', () => {
+    const a = reg({ dep_time: '12:00' }, 'BDAY-2026-0001');
+    const b = reg({ dep_time: '08:00', first: 'Anil', surname: 'Roy' }, 'BDAY-2026-0002');
+    a.legs.find((l) => l.direction === 'departure')!.guest_notes = 'secret';
+    const rows = dropoffSheet([a, b], []);
+    expect(rows.map((r) => r.group)).toEqual(['Grp 1', 'Grp 2']);
+    expect(rows[0].time).toBe('08:00');
+    expect(rows[0].leader).toBe('Anil Roy');
+    expect(rows[0].to).toBe('Hyderabad');
+    expect(JSON.stringify(rows)).not.toContain('secret');
+    expect(dropoffCsv(rows)).toContain('Grp 1');
   });
 });

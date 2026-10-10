@@ -1,0 +1,88 @@
+---
+// Drop-off timeline: same look as the Pickup timeline (/admin/dispatch), for people leaving. One card
+// per out-going party ("Grp N") with the organiser's sheet fields: leader, contact, car, car no., driver.
+import Base from '../../../layouts/Base.astro';
+import NeedsYou from '../../../components/NeedsYou.astro';
+import { requireSession } from '../../../lib/auth';
+import { store } from '../../../lib/store';
+import { computeJobs } from '../../../lib/tasks';
+import { dropoffSheet } from '../../../lib/reports';
+import { humanDate } from '../../../lib/dates';
+
+if (!requireSession(Astro.cookies, new Date())) return Astro.redirect('/admin/login');
+
+const [regs, bookings] = await Promise.all([store.listRegistrations(), store.listBookings()]);
+const jobs = computeJobs(regs, bookings);
+const all = dropoffSheet(regs, bookings);
+
+const dates = [...new Set(all.filter((r) => r.date).map((r) => r.date))].sort();
+const wanted = Astro.url.searchParams.get('date');
+const date = wanted && dates.includes(wanted) ? wanted : dates[0] ?? null;
+const rows = all.filter((r) => r.date === date);
+
+const dot = { need: '🟠', prog: '🔵', done: '🟢' } as const;
+const chipClass = { need: 'warn', prog: 'plan', done: 'ok' } as const;
+---
+<Base title="Drop-off timeline" help={false}>
+  <div class="topbar no-print">
+    <a class="btn small btn-ghost" href="/admin/reports">← Reports</a>
+    <h1 style="margin:0; font-size:1.25rem">Drop-off timeline</h1>
+    <span>
+      <a class="btn small btn-gold" href="/api/admin/reports/dropoff.csv" style="width:auto">⬇ CSV</a>
+      <button class="btn small btn-ghost" style="width:auto" onclick="window.print()">🖨</button>
+    </span>
+  </div>
+
+  <div class="no-print"><NeedsYou jobs={jobs} /></div>
+
+  {dates.length === 0 ? (
+    <div class="card"><p class="muted">No departures need a drop-off yet — they appear here once a family gives a departure date.</p></div>
+  ) : (
+    <>
+      <div class="tabs no-print">
+        {dates.map((d) => (
+          <a class={`tab ${d === date ? 'active' : ''}`} href={`/admin/reports/dropoff?date=${d}`}>{humanDate(d)}</a>
+        ))}
+      </div>
+      <p class="legend">🟠 needs a driver · 🔵 booked / assigned · 🟢 confirmed</p>
+
+      <div class="timeline">
+        {rows.map((r) => {
+          const body = (
+            <div style="flex:1">
+              <div><span class="who">{dot[r.state]} {r.group} · {r.family}</span> <span class="chip plan">{r.people} ppl</span></div>
+              <div class="meta">{r.from} → {r.to}</div>
+              <div class="meta">{r.car || 'No car yet'}{r.carNumber ? ` · ${r.carNumber}` : ''}</div>
+              <div class="meta">Leader: {r.leader}{r.contact ? ` · ${r.contact}` : ''}</div>
+              <div class="meta"><span class={`chip ${chipClass[r.state]}`}>{r.driver ? `Driver: ${r.driver}` : 'Needs a driver'}</span></div>
+            </div>
+          );
+          return (
+            <div class="slot">
+              <div class="t">{r.time || '—'}</div>
+              {r.bookingId ? (
+                <a class={`ev s-${r.state}`} href={`/admin/vehicles/${r.bookingId}`}>{body}<span class="open">›</span></a>
+              ) : (
+                <div class={`ev s-${r.state}`}>{body}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p class="muted small no-print">To book a vehicle for these, use the 🛫 Departures tab on the <a href="/admin/dispatch?dir=departure">Pickup timeline</a>.</p>
+    </>
+  )}
+</Base>
+
+<style>
+  .legend{font-size:.84rem; color:var(--muted); margin:4px 2px 12px}
+  .timeline .ev.s-need{border-left-color:var(--warn)}
+  .timeline .ev.s-prog{border-left-color:#2B5FB3}
+  .timeline .ev.s-done{border-left-color:var(--ok); background:#F4FBF6}
+  .ev{display:flex; gap:10px; align-items:flex-start; color:var(--ink)}
+  a.ev{text-decoration:none}
+  a.ev .open{margin-left:auto; color:var(--muted); font-size:1.3rem; align-self:center}
+  .ev .who{font-weight:700}
+  .ev .meta{margin-top:3px}
+  @media print { .no-print { display: none !important; } }
+</style>

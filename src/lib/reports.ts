@@ -103,6 +103,49 @@ export function runSheets(regs: Registration[], bookings: VehicleBooking[]): Run
   return [...byDriver.values()].sort((a, b) => a.driver.localeCompare(b.driver));
 }
 
+/** Drop-off group sheet (departures): one numbered "Grp N" row per departure leg that needs transport,
+ *  sorted by date then time. Mirrors the organiser's paper sheet. Operational fields only — no guest
+ *  free-text or health notes (the sheet gets forwarded to drivers). */
+export interface DropoffRow {
+  group: string; date: string; time: string; from: string; to: string; family: string; people: number;
+  car: string; leader: string; contact: string; carNumber: string; driver: string;
+  state: 'need' | 'prog' | 'done'; bookingId: string | null;
+}
+export function dropoffSheet(regs: Registration[], bookings: VehicleBooking[]): DropoffRow[] {
+  const byId = new Map(bookings.map((b) => [b.id, b]));
+  const rows: Omit<DropoffRow, 'group'>[] = [];
+  for (const r of regs) {
+    for (const l of r.legs) {
+      if (!l.transport_needed || l.direction !== 'departure') continue;
+      const b = l.vehicle_booking_id ? byId.get(l.vehicle_booking_id) : undefined;
+      const driver = b?.driver_name ?? l.driver_name ?? '';
+      const driverPhone = b?.driver_phone_e164 ?? b?.driver_phone_raw ?? l.driver_phone_e164 ?? '';
+      rows.push({
+        date: l.travel_date ?? '',
+        time: l.pickup_time_confirmed || l.travel_time || '',
+        from: l.pickup_point ?? l.from_location,
+        to: l.to_location,
+        family: `${r.main_contact_surname || r.main_contact_first || r.reference_number} (${l.people_on_this_leg})`,
+        people: l.people_on_this_leg,
+        car: b ? vehicleLabel(b.vehicle_type) : '',
+        leader: guestName(r),
+        contact: guestPhone(r),
+        carNumber: b?.vehicle_reg ?? '',
+        driver: driver ? `${driver}${driverPhone ? ` / ${driverPhone}` : ''}` : '',
+        state: l.status === 'confirmed' ? 'done' : b ? 'prog' : 'need',
+        bookingId: b?.id ?? null,
+      });
+    }
+  }
+  rows.sort((a, b) => (a.date + sortKey(a.time)).localeCompare(b.date + sortKey(b.time)));
+  return rows.map((r, i) => ({ group: `Grp ${i + 1}`, ...r }));
+}
+
+export function dropoffCsv(rows: DropoffRow[]): string {
+  const headers = ['Out going party', 'Pickup', 'Drop at', 'Family', 'Date', 'Number', 'Car type', 'Pickup time', 'Group leader', 'Contact number', 'Car number', 'Driver name / number'];
+  return toCsv(headers, rows.map((r) => [r.group, r.from, r.to, r.family, toDDMMYYYY(r.date), String(r.people), r.car, r.time, r.leader, r.contact, r.carNumber, r.driver]));
+}
+
 /** Chase list: legs missing a date or a flight/train carrier ref. */
 export interface ChaseRow { guest: string; contact: string; whatsapp: string | null; direction: string; missing: string }
 export function chaseList(regs: Registration[]): ChaseRow[] {
