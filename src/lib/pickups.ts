@@ -13,6 +13,11 @@ export interface DriverInfo { name: string; phone: string; reg: string; updated_
 export type DriverMap = Record<string, DriverInfo>;
 export interface NumberedPickup extends Pickup { group: number }
 
+/** Driver details known in advance. Anything saved at /driver or by the organiser overrides these. */
+export const DEFAULT_DRIVERS: DriverMap = {
+  p0: { name: 'Yashwant', phone: '+91 91080 25315', reg: 'KA 38 M 1404', updated_at: '2026-10-11T09:35:00.000Z', by: 'admin' },
+};
+
 export const PICKUPS: Pickup[] = [
   { id: 'p0', place: "Hotel Novotel Hyderabad (near airport)", family: "Theresa", day: 12, weekday: 'Mon', time: "10:30 AM", people: 1, car: "Etios", contacts: [{"name":"Theresa Torrance","phone":"+44 7955 792323"}] },
   { id: 'p1', place: "Bidar Station", family: "Tanu + 2", day: 14, weekday: 'Wed', time: "8:45 AM", people: 3, car: "Local", contacts: [] },

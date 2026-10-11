@@ -6,13 +6,13 @@ import { config } from '../lib/config';
 import { store } from '../lib/store';
 import { CSRF_COOKIE, issueCsrf } from '../lib/csrf';
 import { editorRole } from '../lib/driver-auth';
-import { DRIVERS_KEY, contactsSorted, orderedPickups, time24, type DriverMap } from '../lib/pickups';
+import { DEFAULT_DRIVERS, DRIVERS_KEY, contactsSorted, orderedPickups, time24, type DriverMap } from '../lib/pickups';
 
 export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'no-store');
 
 const role = editorRole(Astro.cookies, new Date());
-const drivers = (await store.getSystem<DriverMap>(DRIVERS_KEY)) ?? {};
+const drivers: DriverMap = { ...DEFAULT_DRIVERS, ...((await store.getSystem<DriverMap>(DRIVERS_KEY)) ?? {}) };
 const list = orderedPickups();
 const days = [...new Set(list.map((p) => p.day))];
 const contacts = contactsSorted();
