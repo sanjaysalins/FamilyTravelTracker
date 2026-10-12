@@ -110,3 +110,39 @@ describe('other scripts', () => {
     expect(v('😀', 'pizza')).toBe('no');
   });
 });
+
+describe('quiz matching: how people really type', () => {
+  it('treats sound-alike spellings as the same', () => {
+    expect(v('Pani poori', 'Pani puri')).toBe('match');
+    expect(v('Rishi Kapur', 'Rishi Kapoor')).toBe('match');
+    expect(v('Sanitiser', 'Hand sanitizer')).not.toBe('no');
+    expect(v('Hand sanitiser bottles', 'Hand sanitizer')).not.toBe('no');
+    expect(v('Mutton Biriyani', 'Mutton biryani')).toBe('match');
+  });
+  it('ignores filler words around a right answer', () => {
+    expect(v('I think pani puri', 'Pani puri')).toBe('match');
+    expect(v('Rishi Kapoor ji', 'Rishi Kapoor')).toBe('match');
+    expect(v('She would buy a house', 'A house')).toBe('match');
+  });
+  it('knows common Hindi/Kannada names for the same thing', () => {
+    expect(v('Golgappa', 'Pani puri')).toBe('match');
+    expect(v('Puchka', 'Pani puri')).toBe('match');
+    expect(v('Ghar', 'A house')).toBe('match');
+    expect(v('Home', 'A house')).toBe('match');
+  });
+  it('does not auto-match look-alike wrong answers', () => {
+    expect(v('Exterior designer', 'Interior designer')).toBe('maybe');
+    expect(v('Fashion designer', 'Interior designer')).toBe('no');
+    expect(v('Chicken biryani', 'Mutton biryani')).not.toBe('match');
+    expect(v('Bhel puri', 'Pani puri')).not.toBe('match');
+  });
+  it('reads written-out and spaced numbers', () => {
+    expect(Q.parseNumber('12 000')).toBe(12000);
+    expect(Q.parseNumber('12.000')).toBe(12000);
+    expect(Q.parseNumber('twelve hundred')).toBe(1200);
+    expect(Q.parseNumber('twelve thousand five hundred')).toBe(12500);
+    expect(Q.parseNumber('twelve thousand')).toBe(12000);
+    expect(Q.parseNumber('12k')).toBe(12000);
+    expect(Q.parseNumber('1.5')).toBe(1.5);
+  });
+});

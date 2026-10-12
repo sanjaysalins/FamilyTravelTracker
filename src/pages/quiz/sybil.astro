@@ -33,7 +33,7 @@ const qnum = (id: string) => QUESTIONS.findIndex((q) => q.id === id) + 1;
 <Base title="Sybil's answers" wide help={false}>
   <div class="hero">
     <div class="kicker">Birthday quiz · Sybil only</div>
-    <h1>Sybil's answers</h1>
+    <h1>Sybil: your page</h1>
     <p>{entries.length} guest{entries.length === 1 ? '' : 's'} so far.</p>
   </div>
   <p class="nav"><a href="/quiz/results">Results →</a>
@@ -42,15 +42,15 @@ const qnum = (id: string) => QUESTIONS.findIndex((q) => q.id === id) + 1;
     )}
   </p>
 
-  {saved && <div class="banner ok">Saved.{missing.length ? ` ${missing.length} question${missing.length === 1 ? '' : 's'} still blank.` : ' All questions answered.'}</div>}
+  {saved && <div class="banner ok">Saved!{missing.length ? ` ${missing.length} question${missing.length === 1 ? '' : 's'} still blank.` : ' All questions answered.'} Next: check the guest answers below, then open Results →.</div>}
   {Object.keys(truths).length > 0 && missing.length > 0 && !saved && (
-    <div class="banner warn">{missing.length} question{missing.length === 1 ? ' is' : 's are'} still blank (nobody can score there): {missing.map((q) => qnum(q.id)).join(', ')}.</div>
+    <div class="banner warn">{missing.length} question{missing.length === 1 ? ' is' : 's are'} still blank (nobody gets points on these until you answer): {missing.map((q) => qnum(q.id)).join(', ')}.</div>
   )}
 
   {blocks.length > 0 && (
     <section>
       <h2>Check guest answers {todo > 0 ? <span class="chip warn">{todo} to check</span> : <span class="chip ok">all checked</span>}</h2>
-      <p class="hint">Each different answer shows once. One tap counts for everyone who wrote it. The close ones are on top; refused answers are tucked underneath in case a right one was missed.</p>
+      <p class="hint">Each different answer shows once. One tap counts for everyone who wrote it. Answers close to hers are on top. "Counted as wrong" answers are tucked underneath in case a right one was missed. Question: did the guest mean the same thing as Sybil?</p>
       {blocks.map((b) => {
         const maybes = b.items.filter((i) => i.verdict === 'maybe');
         const refused = b.items.filter((i) => i.verdict === 'no');
@@ -60,9 +60,9 @@ const qnum = (id: string) => QUESTIONS.findIndex((q) => q.id === id) + 1;
             <input type="hidden" name="q" value={b.q.id} />
             <input type="hidden" name="key" value={it.key} />
             <span class="ans">“{it.sample}” <span class="muted">×{it.count}</span></span>
-            <button class={`btn sm ${it.decision === true ? 'btn-primary' : 'btn-ghost'}`} name="v" value="1" type="submit">Same</button>
-            <button class={`btn sm ${it.decision === false ? 'btn-gold' : 'btn-ghost'}`} name="v" value="0" type="submit">Different</button>
-            {it.decision !== undefined && <button class="btn sm btn-ghost" name="v" value="x" type="submit" title="Undo">↺</button>}
+            <button class={`btn sm ${it.decision === true ? 'btn-primary' : 'btn-ghost'}`} name="v" value="1" type="submit">Same as Sybil's</button>
+            <button class={`btn sm ${it.decision === false ? 'btn-gold' : 'btn-ghost'}`} name="v" value="0" type="submit">Not the same</button>
+            {it.decision !== undefined && <button class="btn sm btn-ghost" name="v" value="x" type="submit" title="Undo">Undo</button>}
           </form>
         );
         return (
@@ -72,7 +72,7 @@ const qnum = (id: string) => QUESTIONS.findIndex((q) => q.id === id) + 1;
             {maybes.map(row)}
             {refused.length > 0 && (
               <details>
-                <summary class="muted">{refused.length} refused answer{refused.length === 1 ? '' : 's'}: tap to look</summary>
+                <summary class="muted">{refused.length} answer{refused.length === 1 ? '' : 's'} counted as wrong: tap to look</summary>
                 {refused.map(row)}
               </details>
             )}
@@ -84,6 +84,7 @@ const qnum = (id: string) => QUESTIONS.findIndex((q) => q.id === id) + 1;
 
   <section>
     <h2>Sybil's answers</h2>
+    <p class="hint">Sybil: please answer about yourself. The guests see the same questions. If you change an answer, your Same / Not the same checks for that question are reset.</p>
     <form method="POST" action="/api/quiz/truths">
       <input type="hidden" name="csrf_token" value={csrf} />
       {QUESTIONS.map((q, i) => {
@@ -105,21 +106,21 @@ const qnum = (id: string) => QUESTIONS.findIndex((q) => q.id === id) + 1;
             {q.type === 'text' && (
               <>
                 <label class="fl" for={`a_${q.id}`}>Also OK (separate with commas)</label>
-                <input id={`a_${q.id}`} name={`a_${q.id}`} type="text" maxlength="400" value={(t?.aliases ?? []).join(', ')} autocomplete="off" placeholder="nicknames, other spellings" />
+                <input id={`a_${q.id}`} name={`a_${q.id}`} type="text" maxlength="400" value={(t?.aliases ?? []).join(', ')} autocomplete="off" placeholder="other spellings, Hindi or Kannada words" />
                 <p class="hint">Only list words you would truly accept. Anything listed here scores a point automatically.</p>
               </>
             )}
           </div>
         );
       })}
-      <button type="submit" class="btn btn-primary" style="width:100%">Save Sybil's answers</button>
+      <button type="submit" class="btn btn-primary" style="width:100%;position:sticky;bottom:8px">Save Sybil's answers</button>
     </form>
   </section>
 </Base>
 
 <style>
   .nav { display:flex; gap:12px; align-items:center; flex-wrap:wrap }
-  .sm { padding:8px 12px; font-size:.92rem }
+  .sm { padding:10px 14px; font-size:1rem; min-height:44px }
   .qn { display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:26px; border-radius:99px; background:var(--teal); color:#fff; font-size:.85rem; margin-right:6px; padding:0 6px }
   .rv { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 0; border-top:1px dashed var(--line) }
   .rv .ans { flex:1 1 180px; font-size:1.05rem; word-break:break-word }

@@ -1,22 +1,21 @@
 // End-to-end test of the birthday quiz against a RUNNING server (real HTTP, real cookies, real store).
 //   npx astro dev --port 4399      (in another terminal)
-//   node scripts/quiz-e2e.mjs [baseUrl]
+//   npx vite-node scripts/quiz-e2e.mjs [baseUrl]
 // Each guest is its own "phone" (own cookie jar). Results are compared with an offline scoring of the
 // same answers, so the server pages, the store and the matcher all have to agree.
 // It wipes the quiz entries at the start and the end (type-DELETE route); Sybil's answers are overwritten.
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
-import { scoreGuest, groupAnswers, compare } from '../src/lib/quiz-match.ts';
+import { scoreGuest, groupAnswers, compare } from '../src/lib/quiz-match';
+import { QUESTIONS } from '../src/lib/quiz';
 
 const BASE = process.argv[2] || 'http://localhost:4399';
 const SIM = new URL('../prototype/quiz/sim/', import.meta.url);
 const PASSWORD = 'bidar2026';
 
-// ---- the questions (same source the server uses is TS; read the prototype copy and check its shape)
-const ctx = {};
-new Function('localStorage', 'ctx', readFileSync(new URL('../prototype/quiz/questions.js', import.meta.url), 'utf8').replace(/^var Q =/m, 'ctx.Q =').split('var KEY')[0])({}, ctx);
-const QS = ctx.Q;
+// ---- the questions: the same list the server uses (run this script with vite-node so the TS imports resolve)
+const QS = QUESTIONS;
 const SCORED = QS.filter((q) => !q.tiebreak);
 const opt = (id, i) => QS.find((q) => q.id === id).options[i];
 const TRUTH = {
@@ -142,7 +141,7 @@ section('2. The two host pages are protected');
   const wrong = await p.post('/api/quiz/login', { csrf_token: csrf, password: 'Bidar2026', next: 'sybil' });
   check('wrong password -> back to login, no session', wrong.status === 303 && /login/.test(wrong.headers.get('location')) && !p.jar.has('ftc_quiz'));
   const errPage = await p.text('/quiz/login?next=sybil');
-  check('wrong password shows an error message', /Incorrect password/.test(errPage.body));
+  check('wrong password shows an error message', /not right/.test(errPage.body));
   const csrf2 = await p.csrfFrom('/quiz/login?next=sybil');
   const ok = await p.post('/api/quiz/login', { csrf_token: csrf2, password: PASSWORD, next: 'sybil' });
   check('correct password -> Sybil page', ok.status === 303 && ok.headers.get('location') === '/quiz/sybil' && p.jar.has('ftc_quiz'), `${ok.status} ${ok.headers.get('location')}`);
@@ -219,7 +218,7 @@ section('5. One entry per phone, name clashes, closing entries');
   check('a blank name is refused', blank.loc === '/quiz?err=name', blank.loc);
   const none = new Phone();
   const noCsrf = await none.post('/api/quiz/submit', { name: 'Sneaky', q1: 'x' });
-  check('a submission without a CSRF token is refused (403)', noCsrf.status === 403);
+  check('a submission without a CSRF token is refused (sent back to the form)', noCsrf.status === 303 && noCsrf.headers.get('location') === '/quiz?err=expired', `${noCsrf.status}`);
   const fake = await guestSubmit('Bad Choice', { q4: 'Hot chocolate', q7: 'made up' });
   const fakeRows = rowsOf((await host.text('/quiz/results')).body).filter((r) => r.name === 'Bad Choice');
   check('made-up choice answers are dropped (0 points)', fake.loc === '/quiz?done=1' && fakeRows[0]?.points === 0);
@@ -233,7 +232,7 @@ section('5. One entry per phone, name clashes, closing entries');
   const lateEdit = await phone0.post('/api/quiz/submit', { csrf_token: phone0Csrf, name: name0, q1: 'Sneaky edit' });
   check('after closing: an existing guest cannot change answers', lateEdit.headers.get('location') === '/quiz?err=closed', lateEdit.headers.get('location'));
   const closedPage = await new Phone().text('/quiz');
-  check('the public page says entries are closed and shows no form', /Entries are closed/.test(closedPage.body) && !/id="qform"/.test(closedPage.body));
+  check('the public page says entries are closed and shows no form', /The quiz is closed/.test(closedPage.body) && !/id="qform"/.test(closedPage.body));
   const nowRows = rowsOf((await host.text('/quiz/results')).body);
   check('Latecomer is not on the board', !nowRows.some((r) => r.name === 'Latecomer'));
   await hostPost('/api/quiz/status', { open: '1' });
@@ -263,7 +262,7 @@ section('7. Sybil reviews the "maybe" answers');
   // what the server holds now: people[0] re-sent only q1 (replacing everything); Bad Choice and Latecomer were added in section 5
   const list = [{ name: people[0].name, answers: { q1: 'Changed my mind' } }, ...people.slice(1).map(stored), { name: 'Bad Choice', answers: {} }, { name: 'Latecomer', answers: Object.fromEntries(Object.entries(TRUTH).map(([k, v]) => [k, v.answer])) }];
   const q = SCORED.find((x) => x.id === 'q3');
-  const maybe = groupAnswers(q, list).find((x) => compare(q, x.sample, TRUTH.q3).verdict === 'maybe' && x.sample.toLowerCase().includes('kapoor') && /sir|ji/i.test(x.sample));
+  const maybe = groupAnswers(q, list).find((x) => compare(q, x.sample, TRUTH.q3).verdict === 'maybe' && x.sample.toLowerCase().includes('kapoor'));
   if (!maybe) { check('(no suitable q3 maybe in the data)', false); } else {
     const pg = await host.text('/quiz/sybil');
     check('the review list shows that answer with its count', pg.body.toLowerCase().includes(maybe.sample.toLowerCase()) && pg.body.includes(`×${maybe.guests.length}`), maybe.sample);
@@ -372,7 +371,7 @@ section('11. Password guessing is rate limited');
   for (let i = 0; i < 8 && !locked; i++) {
     const csrf = await p.csrfFrom('/quiz/login?next=results');
     await p.post('/api/quiz/login', { csrf_token: csrf, password: 'guess' + i, next: 'results' });
-    locked = /Too many attempts/.test((await p.text('/quiz/login?next=results')).body);
+    locked = /Too many tries/.test((await p.text('/quiz/login?next=results')).body);
   }
   check('after a few wrong guesses the login locks for a minute', locked);
   const csrf = await p.csrfFrom('/quiz/login?next=results');

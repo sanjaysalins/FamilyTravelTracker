@@ -53,14 +53,14 @@ Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'str
   </p>
 
   {cleared && cleared !== 'no' && <div class="banner ok">Deleted {cleared} guest entr{cleared === '1' ? 'y' : 'ies'}.</div>}
-  {cleared === 'no' && <div class="banner warn">Nothing deleted. Type DELETE (or RESET) in capitals to confirm.</div>}
+  {cleared === 'no' && <div class="banner warn">Nothing deleted. Type the word DELETE (or RESET) exactly, in capital letters.</div>}
   {cleared && cleared !== 'no' && Astro.url.searchParams.get('reset') === '1' && <div class="banner ok">Quiz reset: Sybil's answers cleared and entries are open again.</div>}
 
   <div class={`banner ${state.open ? 'info' : 'warn'}`}>
     <form method="POST" action="/api/quiz/status" class="row">
       <input type="hidden" name="csrf_token" value={csrf} />
-      <span>Guest entries are <b>{state.open ? 'OPEN' : 'CLOSED'}</b>.{state.open ? ' Close them before Sybil reads her answers out.' : ' Nobody can send or change answers.'}</span>
-      <button class="btn sm btn-primary" name="open" value={state.open ? '0' : '1'} type="submit">{state.open ? 'Close entries' : 'Re-open entries'}</button>
+      <span>The quiz is <b>{state.open ? 'OPEN' : 'CLOSED'}</b> for guests.{state.open ? ' Close it before Sybil reads her answers out.' : ' Nobody can send or change answers.'}</span>
+      <button class="btn sm btn-primary" name="open" value={state.open ? '0' : '1'} type="submit">{state.open ? 'Close the quiz' : 'Re-open the quiz'}</button>
     </form>
   </div>
 
@@ -69,9 +69,11 @@ Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'str
     <div class="banner warn">Sybil has not answered question{board.unanswered.length === 1 ? '' : 's'} {board.unanswered.map(num).join(', ')}. Nobody can score there yet.</div>
   )}
   {answered && board.pending > 0 && (
-    <div class="banner warn"><b>{board.pending} answer{board.pending === 1 ? '' : 's'} not checked yet.</b> They count 0 until Sybil taps Same or Different. <a href="/quiz/sybil">Check them</a>.</div>
+    <div class="banner warn"><b>{board.pending} answer{board.pending === 1 ? '' : 's'} not checked yet.</b> They count 0 until Sybil taps "Same as Sybil's" or "Not the same". <a href="/quiz/sybil">Check them</a>.</div>
   )}
-  {answered && board.pending === 0 && board.unanswered.length === 0 && entries.length > 0 && <div class="banner ok">Everything is checked. These results are final.</div>}
+  {answered && board.pending === 0 && board.unanswered.length === 0 && entries.length > 0 && (state.open
+    ? <div class="banner ok">All checked so far. Close the quiz to make the results final.</div>
+    : <div class="banner ok">Everything is checked. These results are final.</div>)}
 
   {answered && podium.length > 0 && (
     <div class="podium">
@@ -105,6 +107,7 @@ Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'str
       </tbody>
     </table>
   </div>
+  <p class="hint">✓ point · ? waiting for Sybil to check (counts 0 until then) · ✗ no point</p>
 
   {answered && (
     <details class="card">
@@ -138,7 +141,7 @@ Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'str
 
 <style>
   .nav { display:flex; gap:14px; align-items:center; flex-wrap:wrap }
-  .sm { padding:8px 12px; font-size:.92rem }
+  .sm { padding:10px 14px; font-size:1rem; min-height:44px }
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:space-between }
   .podium { display:flex; gap:10px; margin:16px 0; flex-wrap:wrap }
   .pod { flex:1 1 150px; background:#fff; border:2px solid var(--line); border-radius:var(--radius); padding:14px; text-align:center; box-shadow:var(--shadow) }
@@ -147,12 +150,12 @@ Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'str
   .pname { font-weight:700; font-size:1.15rem; word-break:break-word }
   .ppts { font-size:2rem; font-weight:800; color:var(--teal-dark) }
   .ppts small { font-size:1rem; color:var(--muted) }
-  .ptie { font-size:.8rem; color:var(--warn) }
+  .ptie { font-size:.95rem; color:var(--warn) }
   .lb td { vertical-align:middle }
   .rank { font-size:1.2rem; font-weight:800; color:var(--teal-dark); white-space:nowrap }
   .pts { font-size:1.2rem; font-weight:800; white-space:nowrap }
   .pills { display:flex; flex-wrap:wrap; gap:3px; min-width:220px }
-  .pill { border-radius:8px; padding:1px 6px; font-size:.75rem; font-weight:700; white-space:nowrap }
+  .pill { border-radius:8px; padding:2px 7px; font-size:.9rem; font-weight:700; white-space:nowrap }
   .pill.match { background:#d8f0e2; color:var(--ok) }
   .pill.maybe { background:var(--gold-soft); color:var(--warn) }
   .pill.no { background:#f6dcdc; color:var(--danger) }

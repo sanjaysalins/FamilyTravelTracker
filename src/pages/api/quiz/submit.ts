@@ -14,7 +14,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const form = await request.formData();
   const field = form.get(CSRF_FIELD);
   if (!verifyCsrf(cookies.get(CSRF_COOKIE)?.value, typeof field === 'string' ? field : null)) {
-    return new Response('Invalid or expired form session. Please reload and try again.', { status: 403 });
+    return redirect('/quiz?err=expired', 303);
   }
 
   const state = (await store.getQuiz<QuizState>('state')) ?? { open: true };
