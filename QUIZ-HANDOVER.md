@@ -39,10 +39,7 @@ Type `RESET` = also wipe Sybil's answers and reopen entries. Use RESET before th
 - Some choice options guess family details (e.g. Bangalore): owner must check them.
 
 ## TOMORROW (in order)
-1. Owner says yes -> commit quiz work (trailer `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`). Ask again before push/deploy.
-2. After deploy: smoke test on live: submit as a few guests -> enter Sybil's answers -> check results -> type `RESET`.
-3. Optional: set `QUIZ_PASSWORD_HASH` in Netlify env; QR code / print page; browser check (ask first); edit guessy options; one-blank-answer polish; big agent stress test vs server.
-4. Before the party: final `RESET`, then real answers from Sybil.
+See RESUME.md, section "SESSION 2026-10-12". Short form: check guessed options -> optional password hash + phone check -> party day: Sybil enters ALL answers first, close quiz, settle "?" answers, announce.
 
 Untracked unrelated files (not quiz): `family-travel-backup.json`, `requirements_backup.txt`, `prototype/admin-dropoff.html`, `prototype/dropoffs-preview.html`: decide separately.
 

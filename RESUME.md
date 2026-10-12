@@ -4,12 +4,26 @@
 
 ---
 
-## ▶▶ SESSION 2026-10-11 night — Sybil's 60th quiz (server version BUILT, uncommitted) — PICK UP HERE
+## ▶▶ SESSION 2026-10-12 — Sybil's 60th quiz is LIVE and READY — PICK UP HERE
 
-Full detail: `F:\slk\PycharmProjects\FamilyTravelTracker\QUIZ-HANDOVER.md`.
-- 3 pages: `/quiz` (public), `/quiz/sybil` + `/quiz/results` (password `bidar2026` or admin). Reset box on results (`DELETE` / `RESET`).
-- Tests: vitest 165 pass; e2e 69/0; build OK. **Nothing committed/pushed/deployed. Not seen in a browser.**
-- Tomorrow: ask owner -> commit -> (ask) push -> live smoke test -> `RESET`. Then the pickups TODO below still stands (event 16 Oct).
+Full detail: `F:slkPycharmProjectsFamilyTravelTrackerQUIZ-HANDOVER.md`. Everything is committed and pushed (`main` = `origin/main`).
+
+**State of the live quiz (https://bidarplan.netlify.app):** deployed, live-tested (69/69 e2e), then **final RESET done**: 0 guests, Sybil's answers EMPTY, quiz OPEN, public form working. Do NOT run test scripts against live again without a RESET afterwards.
+- Pages: `/quiz` (public form) · `/quiz/sybil` (Sybil's answers) · `/quiz/results` (board). Host password `bidar2026` (or admin login). Reset box at the bottom of results (type `DELETE` = guests only, `RESET` = everything).
+- NEW today: on results, tap "See [name]'s answers" to read each guest's answers next to Sybil's, with **Same as Sybil's / Not the same / Undo** buttons (one tap counts for every guest who wrote the same answer). Commit `351203f`.
+- Ranking: most points; tie -> closer guess on the eye-surgery number (q13); still tied -> shared place (`5=`).
+- QR print page (1 big sign + 6 small cards, decoded OK -> /quiz): `F:slkPycharmProjectsFamilyTravelTrackerprototypequizQR-PRINT.html` (+ `qr.png`).
+- Live test report: `F:slkPycharmProjectsFamilyTravelTrackerprototypequiz-live-test-report.html`.
+- Tests: vitest 170 pass; build OK. NOT yet viewed on a real phone (owner rule: never auto-open browsers; ask first).
+
+**TOMORROW, in order:**
+1. `git pull`. Ask owner: any change wanted after trying the demo on a phone?
+2. Check the guessed answer options with the owner (e.g. "Bangalore" in the superpower option, q16) and edit `QUESTIONS` in `src/lib/quiz.ts` if wrong (then run vitest, build, push, check deploy).
+3. Optional: set `QUIZ_PASSWORD_HASH` in Netlify env (default is `bidar2026`); phone check of /quiz and /quiz/results (ask first).
+4. Party day: open `/quiz/sybil`, Sybil enters ALL her answers BEFORE anyone sees the board; print the QR page. At the end: Close the quiz, settle every "?" answer (results page shows the count), then announce. If any test entries sneak in: `RESET` first.
+5. Then the pickups TODO below still stands (event 16 Oct) — see the 2026-10-07 section and `TODO-PICKUPS.md`.
+
+**Untracked, unrelated, undecided (keep or delete):** `family-travel-backup.json`, `requirements_backup.txt`, `prototype/admin-dropoff.html`, `prototype/dropoffs-preview.html`.
 
 ---
 
