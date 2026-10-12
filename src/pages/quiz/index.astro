@@ -1,0 +1,167 @@
+---
+// PUBLIC: "Who knows Sybil best?" Everyone scans the QR to land here. No host links on this page.
+// One entry per phone (device cookie): coming back shows what you sent and lets you change it
+// while entries are open.
+import Base from '../../layouts/Base.astro';
+import { config } from '../../lib/config';
+import { store } from '../../lib/store';
+import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
+import { deviceId, setDeviceCookie } from '../../lib/quiz-auth';
+import { QUESTIONS, ANSWER_MAX, NAME_MAX, type QuizEntry, type QuizState } from '../../lib/quiz';
+
+export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'no-store');
+
+const dev = deviceId(Astro.cookies);
+if (dev.fresh) setDeviceCookie(Astro.cookies, dev.id);
+const state = (await store.getQuiz<QuizState>('state')) ?? { open: true };
+const mine = await store.getQuiz<QuizEntry>('entry-' + dev.id);
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
+
+const done = Astro.url.searchParams.get('done') === '1';
+const err = Astro.url.searchParams.get('err');
+const editing = Astro.url.searchParams.get('edit') === '1';
+const showForm = state.open && (!mine || editing || !!err);
+const ERR: Record<string, string> = {
+  name: 'Please type your name first.',
+  taken: 'Someone already used that name on another phone. Please add your surname or initial.',
+  closed: 'Sorry, entries are closed.',
+  full: 'Sorry, the quiz is full.',
+};
+const val = (id: string) => mine?.answers[id] ?? '';
+const total = QUESTIONS.filter((q) => !q.tiebreak).length;
+---
+<Base title="Who knows Sybil best?" help={false}>
+  <div class="hero">
+    <div class="kicker">Sybil's {config.event.birthdayAge}th birthday game</div>
+    <h1>Who knows Sybil best?</h1>
+    <p>{total} quick questions. 1 point for every answer that matches Sybil. Fill in your guesses!</p>
+  </div>
+
+  {done && mine && (
+    <div class="card okcard" id="done">
+      <div class="tick">✓</div>
+      <h2>Thank you, {mine.name}!</h2>
+      <p>Your answers are in. Good luck!</p>
+    </div>
+  )}
+
+  {err && ERR[err] && <div class="banner warn" role="alert">{ERR[err]}</div>}
+
+  {!state.open && (
+    <div class="banner info"><b>Entries are closed.</b> Sybil is about to answer. Watch the screen!</div>
+  )}
+
+  {mine && !showForm && (
+    <div class="card">
+      <h2>{done ? 'You are in' : `Welcome back, ${mine.name}`}</h2>
+      <p class="muted">You answered {Object.keys(mine.answers).length} of {QUESTIONS.length} questions.</p>
+      {state.open
+        ? <p><a class="btn btn-ghost" href="/quiz?edit=1">Change my answers</a></p>
+        : <p class="muted">Entries are closed, so answers can no longer be changed.</p>}
+    </div>
+  )}
+
+  {showForm && (
+    <form method="POST" action="/api/quiz/submit" id="qform" novalidate>
+      <input type="hidden" name="csrf_token" value={csrf} />
+      <div class="card">
+        <label class="fl" for="name">Your name <span class="req">*</span></label>
+        <input id="name" name="name" type="text" maxlength={NAME_MAX} autocomplete="name" value={mine?.name ?? ''} placeholder="e.g. Aunt Mary" />
+      </div>
+
+      {QUESTIONS.map((q, i) => (
+        <div class="card q">
+          <label class="fl" for={`f_${q.id}`}><span class="qn">{q.tiebreak ? '★' : i + 1}</span> {q.text}</label>
+          {q.type === 'choice' ? (
+            <div class="choices" role="radiogroup">
+              {q.options!.map((o) => (
+                <label class={`choice${val(q.id) === o ? ' sel' : ''}`}>
+                  <input type="radio" name={q.id} value={o} checked={val(q.id) === o} />
+                  <span>{o}</span>
+                </label>
+              ))}
+            </div>
+          ) : q.type === 'number' ? (
+            <>
+              <input id={`f_${q.id}`} name={q.id} type="text" inputmode="numeric" maxlength={20} value={val(q.id)} placeholder="Your best guess (a number)" />
+              <p class="hint">Only used if two people have the same score. Closest guess wins.</p>
+            </>
+          ) : (
+            <input id={`f_${q.id}`} name={q.id} type="text" maxlength={ANSWER_MAX} value={val(q.id)} placeholder="Type your answer" autocomplete="off" />
+          )}
+        </div>
+      ))}
+
+      <div class="banner warn" id="blankwarn" hidden></div>
+      <button type="submit" class="btn btn-primary" id="sendbtn" style="width:100%">Send my answers</button>
+      <p class="hint center">One entry per phone. You can change it until entries close.</p>
+    </form>
+  )}
+</Base>
+
+<style>
+  .qn { display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:26px; border-radius:99px;
+        background:var(--teal); color:#fff; font-size:.85rem; margin-right:6px; padding:0 6px; }
+  .q .fl { margin-top:0; line-height:1.35 }
+  .okcard { text-align:center; border:2px solid var(--ok) }
+  .okcard .tick { width:64px; height:64px; margin:0 auto 8px; border-radius:99px; background:var(--ok); color:#fff; font-size:2.2rem; line-height:64px; font-weight:700 }
+  .choice { font-size:1.05rem }
+  .choice.sel { border-color:var(--teal); background:#F1F8F6; font-weight:600 }
+  .choice:has(input:checked) { border-color:var(--teal); background:#F1F8F6; font-weight:600 }
+</style>
+
+<script is:inline define:vars={{ done }}>
+  // Draft autosave (answers only, never the CSRF field). Survives Back / app switching / refresh.
+  (function () {
+    var KEY = 'sybil-quiz-draft';
+    var safe = function (fn) { try { return fn(); } catch (e) { return null; } };
+    if (done) { safe(function () { localStorage.removeItem(KEY); }); return; }
+    var form = document.getElementById('qform');
+    if (!form) return;
+    var fields = function () { return Array.prototype.slice.call(form.querySelectorAll('input[name]:not([name=csrf_token])')); };
+    // restore only into an empty form (an existing entry already pre-fills it)
+    var draft = safe(function () { return JSON.parse(localStorage.getItem(KEY) || 'null'); });
+    var pristine = fields().every(function (f) { return f.type === 'radio' ? !f.checked : !f.value; });
+    if (draft && pristine) {
+      fields().forEach(function (f) {
+        var v = draft[f.name];
+        if (v == null) return;
+        if (f.type === 'radio') f.checked = (f.value === v); else f.value = v;
+      });
+    }
+    var mark = function () { form.querySelectorAll('.choice').forEach(function (c) { c.classList.toggle('sel', c.querySelector('input').checked); }); };
+    var save = function () {
+      var d = {};
+      fields().forEach(function (f) { if (f.type === 'radio') { if (f.checked) d[f.name] = f.value; } else if (f.value) d[f.name] = f.value; });
+      safe(function () { localStorage.setItem(KEY, JSON.stringify(d)); });
+    };
+    mark();
+    form.addEventListener('input', function () { mark(); save(); });
+    form.addEventListener('change', function () { mark(); save(); });
+
+    // warn about blank answers; the first press shows the warning, the second sends anyway
+    var warned = false;
+    form.addEventListener('submit', function (e) {
+      var name = form.querySelector('[name=name]');
+      if (!name.value.trim()) { e.preventDefault(); name.focus(); name.scrollIntoView({ block: 'center' }); name.style.borderColor = 'var(--danger)'; return; }
+      var seen = {}, blanks = 0;
+      fields().forEach(function (f) {
+        if (f.name === 'name' || f.name === 'q13') return;
+        if (f.type === 'radio') { if (f.checked) seen[f.name] = 1; else if (!(f.name in seen)) seen[f.name] = 0; }
+        else if (f.value.trim()) seen[f.name] = 1; else if (!(f.name in seen)) seen[f.name] = 0;
+      });
+      Object.keys(seen).forEach(function (k) { if (!seen[k]) blanks++; });
+      if (blanks && !warned) {
+        e.preventDefault(); warned = true;
+        var w = document.getElementById('blankwarn');
+        w.hidden = false; w.textContent = 'You left ' + blanks + ' blank. Tap "Send my answers" again to send anyway, or scroll up to fill them.';
+        w.scrollIntoView({ block: 'center' });
+        return;
+      }
+      var b = document.getElementById('sendbtn'); b.disabled = true; b.textContent = 'Sending...';
+    });
+  })();
+</script>

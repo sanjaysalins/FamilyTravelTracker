@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scores (POC)</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="quiz.css">
+</head>
+<body><div class="wrap">
+<div class="hero"><div class="kicker">Birthday game</div><h1>Scores</h1></div>
+<p><a href="index.html">← Guest page</a> · <a href="sybil.html">Sybil's page</a></p>
+<div id="bt"></div>
+</div>
+<script src="quiz-match.cjs"></script>
+<script src="questions.js"></script>
+<script>
+if (!Object.keys(S.truths).length) $('bt').innerHTML = '<p class="muted">Sybil has not answered yet.</p>';
+else {
+  var rows = S.guests.map(function(g){ return QuizMatch.scoreGuest(Q, g, S.truths, S.decisions); }).sort(function(a,b){ return b.points - a.points || a.tieDiff - b.tieDiff; });
+  var pend = rows.reduce(function(n,r){ return n + Object.keys(r.detail).filter(function(k){ return r.detail[k]==='maybe'; }).length; }, 0);
+  $('bt').innerHTML = (pend ? '<p class="pill maybe">'+pend+' "maybe" answers not checked yet — they count 0</p>' : '') +
+   '<div class="card"><table>' + rows.map(function(r,i){ return '<tr><td class="rank">'+(i+1)+'</td><td><b>'+esc(r.name)+'</b><br>'+
+   Q.filter(function(q){ return !q.tiebreak; }).map(function(q){ return '<span class="pill '+r.detail[q.id]+'">'+(r.detail[q.id]==='match'?'✓':r.detail[q.id]==='maybe'?'?':'✗')+'</span>'; }).join(' ')+
+   '</td><td class="rank">'+r.points+'/'+Q.filter(function(q){ return !q.tiebreak; }).length+'</td></tr>'; }).join('') + '</table></div>';
+}
+</script></body></html>

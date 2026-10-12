@@ -1,0 +1,10 @@
+[
+{"name":"Meera","answers":{"q1":"Butter chicken with garlic naan","q2":"Coorg in monsoon","q3":"forty","q4":"Tea","q5":"A Mercedes, the black one"},"meant":{"q1":true,"q2":true,"q3":true,"q4":true,"q5":true}},
+{"name":"Rohan","answers":{"q1":"butter chiken","q2":"Kodagu (Coorg)","q3":"40","q4":"Coffee","q5":"BMW 7 series"},"meant":{"q1":true,"q2":true,"q3":true,"q4":false,"q5":false}},
+{"name":"Anjali","answers":{"q1":"Paneer butter masala","q2":"Goa, every December","q3":"39","q4":"Tea","q5":"Mercedes Benz S-Class"},"meant":{"q1":false,"q2":false,"q3":false,"q4":true,"q5":true}},
+{"name":"Karthik","answers":{"q1":"Murgh makhani","q2":"coorg","q3":"40th","q4":"Neither","q5":"Audi Q7"},"meant":{"q1":true,"q2":true,"q3":true,"q4":false,"q5":false}},
+{"name":"Divya","answers":{"q1":"Butter Chicken!!","q2":"Ooty","q3":"Forty","q4":"Tea","q5":"merc"},"meant":{"q1":true,"q2":false,"q3":true,"q4":true,"q5":true}},
+{"name":"Suresh","answers":{"q1":"Biryani","q2":"Coorg","q3":"41","q4":"Coffee","q5":"Mercedes"},"meant":{"q1":false,"q2":true,"q3":false,"q4":false,"q5":true}},
+{"name":"Priya","answers":{"q1":"Chicken butter masala with naan","q2":"Coorg/Madikeri","q3":"turning 40","q4":"Tea","q5":"Porsche 911"},"meant":{"q1":true,"q2":true,"q3":true,"q4":true,"q5":false}},
+{"name":"Vikram","answers":{"q1":"Sushi","q2":"Kodaikanal","q3":"35","q4":"Neither","q5":"Mercedes-Benz G Wagon"},"meant":{"q1":false,"q2":false,"q3":false,"q4":false,"q5":true}}
+]

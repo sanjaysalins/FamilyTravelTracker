@@ -1,0 +1,12 @@
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin:12px 0}
+label{display:block;font-weight:700;margin:.2em 0 .3em}
+input[type=text],input[type=number]{width:100%;padding:12px;font-size:1.05rem;border:2px solid var(--line);border-radius:10px}
+.opt{display:block;padding:10px 12px;border:2px solid var(--line);border-radius:10px;margin:6px 0;font-weight:500}
+.btn{background:var(--teal);color:#fff;border:0;border-radius:12px;padding:13px 18px;font-size:1.05rem;font-weight:700;cursor:pointer}
+.btn.alt{background:#fff;color:var(--teal-dark);border:2px solid var(--teal)}
+.btn.sm{padding:8px 12px;font-size:.95rem}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{border-radius:99px;padding:3px 10px;font-size:.85rem;font-weight:700}
+.match{background:#d8f0e2;color:var(--ok)} .maybe{background:var(--gold-soft);color:var(--warn)} .no{background:#f6dcdc;color:var(--danger)}
+.rank{font-size:1.3rem;font-weight:800}
+table{width:100%;border-collapse:collapse} td{padding:8px 4px;border-bottom:1px solid var(--line)}

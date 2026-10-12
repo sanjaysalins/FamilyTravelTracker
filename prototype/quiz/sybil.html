@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sybil's answers (POC)</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="quiz.css">
+</head>
+<body><div class="wrap">
+<div class="hero"><div class="kicker">Birthday game · Sybil only</div><h1>Sybil's answers</h1><p>Answer honestly — your family guessed!</p></div>
+<p><a href="index.html">← Guest page</a> · <a href="scores.html">Scores →</a></p>
+<p class="muted">Add "also OK" words (nicknames, other spellings) if you like.</p>
+<div id="sq"></div>
+<button class="btn" id="ssave">Save Sybil's answers</button>
+<p id="smsg" class="muted"></p>
+<h2>Check the "maybe" answers</h2>
+<p class="muted">Each different answer is shown once — one tap counts for everyone who wrote it.</p>
+<div id="review"></div>
+</div>
+<script src="quiz-match.cjs"></script>
+<script src="questions.js"></script>
+<script>
+$('sq').innerHTML = Q.map(function(q){ return '<div class="card"><label>'+esc(q.text)+'</label>'+input(q,'s_')+
+  (q.type==='text' ? '<div class="muted" style="margin-top:8px">Also OK (comma between):</div><input type="text" id="a_'+q.id+'">' : '')+'</div>'; }).join('');
+
+Q.forEach(function(q){ var t = S.truths[q.id]; if (!t) return;
+  if (q.type === 'choice'){ Array.prototype.forEach.call(document.getElementsByName('s_'+q.id), function(r){ if (r.value === t.answer) r.checked = true; }); }
+  else { $('s_'+q.id).value = t.answer; if ($('a_'+q.id)) $('a_'+q.id).value = (t.aliases||[]).join(', '); }
+});
+
+$('ssave').onclick = function(){
+  Q.forEach(function(q){
+    var a = val(q,'s_'); if (!a) return;
+    S.truths[q.id] = {answer:a, aliases: q.type==='text' ? $('a_'+q.id).value.split(',').map(function(x){return x.trim();}).filter(Boolean) : []};
+  });
+  save(); $('smsg').textContent = 'Saved.'; renderReview();
+};
+
+function renderReview(){
+  var h = '';
+  Q.forEach(function(q){
+    var t = S.truths[q.id]; if (!t || q.tiebreak) return;
+    var maybes = QuizMatch.groupAnswers(q, S.guests).filter(function(g){ return QuizMatch.compare(q, g.sample, t).verdict === 'maybe'; });
+    if (!maybes.length) return;
+    h += '<div class="card"><b>'+esc(q.text)+'</b> <span class="muted">Sybil: '+esc(t.answer)+'</span>';
+    maybes.forEach(function(g){
+      var d = (S.decisions[q.id]||{})[g.key];
+      h += '<div class="row" style="margin-top:8px"><span style="flex:1">“'+esc(g.sample)+'” <span class="muted">×'+g.guests.length+'</span></span>'+
+        '<button class="btn sm '+(d===true?'':'alt')+'" data-q="'+q.id+'" data-k="'+esc(g.key)+'" data-v="1">Same</button>'+
+        '<button class="btn sm '+(d===false?'':'alt')+'" data-q="'+q.id+'" data-k="'+esc(g.key)+'" data-v="0">Different</button></div>';
+    });
+    h += '</div>';
+  });
+  $('review').innerHTML = h || '<p class="muted">Nothing to check. 🎉</p>';
+  Array.prototype.forEach.call($('review').querySelectorAll('button'), function(b){ b.onclick = function(){
+    (S.decisions[b.dataset.q] = S.decisions[b.dataset.q] || {})[b.dataset.k] = b.dataset.v === '1'; save(); renderReview();
+  }; });
+}
+renderReview();
+</script></body></html>

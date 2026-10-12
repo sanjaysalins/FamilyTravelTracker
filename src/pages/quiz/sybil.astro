@@ -1,0 +1,128 @@
+---
+// PROTECTED (quiz password or admin): Sybil enters her answers, then taps Same / Different on the
+// guest answers that were not an obvious match. The review comes FIRST once answers exist, so a
+// tapping session never starts with a long scroll.
+import Base from '../../layouts/Base.astro';
+import { config } from '../../lib/config';
+import { store } from '../../lib/store';
+import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
+import { quizHost, touchQuizHost } from '../../lib/quiz-auth';
+import { QUESTIONS, ANSWER_MAX, SCORED, reviewBlocks, type QuizEntry, type Truths } from '../../lib/quiz';
+import type { Decisions } from '../../lib/quiz-match';
+
+export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'no-store');
+
+const now = new Date();
+const role = quizHost(Astro.cookies, now);
+if (!role) return Astro.redirect('/quiz/login?next=sybil');
+touchQuizHost(Astro.cookies, role, now);
+
+const truths = (await store.getQuiz<Truths>('truths')) ?? {};
+const decisions = (await store.getQuiz<Decisions>('decisions')) ?? {};
+const entries = await store.listQuizEntries<QuizEntry>();
+const blocks = reviewBlocks(entries, truths, decisions);
+const todo = blocks.reduce((n, b) => n + b.items.filter((i) => i.verdict === 'maybe' && i.decision === undefined).length, 0);
+const missing = SCORED.filter((q) => !truths[q.id]);
+
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
+const saved = Astro.url.searchParams.get('saved') === '1';
+const qnum = (id: string) => QUESTIONS.findIndex((q) => q.id === id) + 1;
+---
+<Base title="Sybil's answers" wide help={false}>
+  <div class="hero">
+    <div class="kicker">Birthday quiz · Sybil only</div>
+    <h1>Sybil's answers</h1>
+    <p>{entries.length} guest{entries.length === 1 ? '' : 's'} so far.</p>
+  </div>
+  <p class="nav"><a href="/quiz/results">Results →</a>
+    {role === 'quiz' && (
+      <form method="POST" action="/api/quiz/logout" style="display:inline"><input type="hidden" name="csrf_token" value={csrf} /><button class="btn btn-ghost sm" type="submit">Log out</button></form>
+    )}
+  </p>
+
+  {saved && <div class="banner ok">Saved.{missing.length ? ` ${missing.length} question${missing.length === 1 ? '' : 's'} still blank.` : ' All questions answered.'}</div>}
+  {Object.keys(truths).length > 0 && missing.length > 0 && !saved && (
+    <div class="banner warn">{missing.length} question{missing.length === 1 ? ' is' : 's are'} still blank (nobody can score there): {missing.map((q) => qnum(q.id)).join(', ')}.</div>
+  )}
+
+  {blocks.length > 0 && (
+    <section>
+      <h2>Check guest answers {todo > 0 ? <span class="chip warn">{todo} to check</span> : <span class="chip ok">all checked</span>}</h2>
+      <p class="hint">Each different answer shows once. One tap counts for everyone who wrote it. The close ones are on top; refused answers are tucked underneath in case a right one was missed.</p>
+      {blocks.map((b) => {
+        const maybes = b.items.filter((i) => i.verdict === 'maybe');
+        const refused = b.items.filter((i) => i.verdict === 'no');
+        const row = (it: typeof b.items[number]) => (
+          <form method="POST" action="/api/quiz/decide" class="rv">
+            <input type="hidden" name="csrf_token" value={csrf} />
+            <input type="hidden" name="q" value={b.q.id} />
+            <input type="hidden" name="key" value={it.key} />
+            <span class="ans">“{it.sample}” <span class="muted">×{it.count}</span></span>
+            <button class={`btn sm ${it.decision === true ? 'btn-primary' : 'btn-ghost'}`} name="v" value="1" type="submit">Same</button>
+            <button class={`btn sm ${it.decision === false ? 'btn-gold' : 'btn-ghost'}`} name="v" value="0" type="submit">Different</button>
+            {it.decision !== undefined && <button class="btn sm btn-ghost" name="v" value="x" type="submit" title="Undo">↺</button>}
+          </form>
+        );
+        return (
+          <div class="card" id={b.q.id}>
+            <b>{qnum(b.q.id)}. {b.q.text}</b>
+            <div class="muted">Sybil: <b>{b.truth.answer}</b></div>
+            {maybes.map(row)}
+            {refused.length > 0 && (
+              <details>
+                <summary class="muted">{refused.length} refused answer{refused.length === 1 ? '' : 's'}: tap to look</summary>
+                {refused.map(row)}
+              </details>
+            )}
+          </div>
+        );
+      })}
+    </section>
+  )}
+
+  <section>
+    <h2>Sybil's answers</h2>
+    <form method="POST" action="/api/quiz/truths">
+      <input type="hidden" name="csrf_token" value={csrf} />
+      {QUESTIONS.map((q, i) => {
+        const t = truths[q.id];
+        return (
+          <div class="card">
+            <label class="fl" style="margin-top:0"><span class="qn">{q.tiebreak ? '★' : i + 1}</span> {q.text}</label>
+            {q.type === 'choice' ? (
+              <div class="choices">
+                {q.options!.map((o) => (
+                  <label class={`choice${t?.answer === o ? ' sel' : ''}`}>
+                    <input type="radio" name={q.id} value={o} checked={t?.answer === o} /><span>{o}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <input name={q.id} type="text" maxlength={ANSWER_MAX} value={t?.answer ?? ''} autocomplete="off" placeholder={q.type === 'number' ? 'The true number' : 'Her answer'} />
+            )}
+            {q.type === 'text' && (
+              <>
+                <label class="fl" for={`a_${q.id}`}>Also OK (separate with commas)</label>
+                <input id={`a_${q.id}`} name={`a_${q.id}`} type="text" maxlength="400" value={(t?.aliases ?? []).join(', ')} autocomplete="off" placeholder="nicknames, other spellings" />
+                <p class="hint">Only list words you would truly accept. Anything listed here scores a point automatically.</p>
+              </>
+            )}
+          </div>
+        );
+      })}
+      <button type="submit" class="btn btn-primary" style="width:100%">Save Sybil's answers</button>
+    </form>
+  </section>
+</Base>
+
+<style>
+  .nav { display:flex; gap:12px; align-items:center; flex-wrap:wrap }
+  .sm { padding:8px 12px; font-size:.92rem }
+  .qn { display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:26px; border-radius:99px; background:var(--teal); color:#fff; font-size:.85rem; margin-right:6px; padding:0 6px }
+  .rv { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 0; border-top:1px dashed var(--line) }
+  .rv .ans { flex:1 1 180px; font-size:1.05rem; word-break:break-word }
+  details summary { cursor:pointer; padding:10px 0 }
+  .choice:has(input:checked) { border-color:var(--teal); background:#F1F8F6; font-weight:600 }
+</style>

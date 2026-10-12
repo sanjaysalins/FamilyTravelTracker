@@ -1,0 +1,38 @@
+---
+// Quiz host login: one password opens Sybil's answers page and the results page.
+// The organiser's admin session also works there, so an admin never needs this form.
+import Base from '../../layouts/Base.astro';
+import { config } from '../../lib/config';
+import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
+import { quizHost } from '../../lib/quiz-auth';
+
+export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'no-store');
+
+const next = Astro.url.searchParams.get('next') === 'sybil' ? 'sybil' : 'results';
+if (quizHost(Astro.cookies, new Date())) return Astro.redirect('/quiz/' + next);
+
+let error = '';
+const flash = Astro.cookies.get('ftc_quiz_err')?.value;
+if (flash) {
+  error = flash === 'locked' ? 'Too many attempts. Please wait a minute and try again.' : 'Incorrect password.';
+  Astro.cookies.delete('ftc_quiz_err', { path: '/' });
+}
+const csrf = issueCsrf();
+Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'strict', secure: config.isProd, maxAge: 7200 });
+---
+<Base title="Quiz host login" help={false}>
+  <div class="hero">
+    <div class="kicker">{config.event.birthdayName}'s {config.event.birthdayAge}th · birthday quiz</div>
+    <h1>Host login</h1>
+    <p>For {config.event.birthdayName}'s answers and the results. The quiz itself is open to everyone.</p>
+  </div>
+  <form class="card" method="POST" action="/api/quiz/login">
+    <input type="hidden" name="csrf_token" value={csrf} />
+    <input type="hidden" name="next" value={next} />
+    {error && <div class="banner warn" role="alert">{error}</div>}
+    <label class="fl" for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required autofocus />
+    <button type="submit" class="btn btn-primary" style="margin-top:16px">Log in</button>
+  </form>
+</Base>

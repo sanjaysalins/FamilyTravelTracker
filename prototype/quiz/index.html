@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Who knows Sybil best? (POC)</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="quiz.css">
+</head>
+<body><div class="wrap">
+<div class="hero"><div class="kicker">Birthday game · POC</div><h1>Who knows Sybil best?</h1>
+<p>1 point for every answer that matches Sybil.</p></div>
+<p class="muted"><a href="sybil.html">Sybil's page</a> · <a href="scores.html">Scores</a></p>
+
+<div class="card"><label>Your name</label><input type="text" id="gname" placeholder="e.g. Aunt Mary"></div>
+<div id="gq"></div>
+<button class="btn" id="gsend">Send my answers</button>
+<p id="gmsg" class="muted"></p>
+<p class="muted"><button class="btn alt sm" id="reset">Start over (demo)</button></p>
+</div>
+<script src="quiz-match.cjs"></script>
+<script src="questions.js"></script>
+<script>
+$('gq').innerHTML = Q.map(function(q){ return '<div class="card"><label>'+esc(q.text)+'</label>'+input(q,'g_')+'</div>'; }).join('');
+$('gsend').onclick = function(){
+  var name = $('gname').value.trim(); if (!name){ $('gmsg').textContent = 'Please add your name.'; return; }
+  var answers = {}; Q.forEach(function(q){ answers[q.id] = val(q,'g_'); });
+  S.guests.push({name:name, answers:answers}); save();
+  $('gmsg').textContent = 'Thanks '+name+'! ('+S.guests.length+' guests so far)';
+  $('gname').value = ''; Q.forEach(function(q){ if (q.type!=='choice') $('g_'+q.id).value=''; });
+  Array.prototype.forEach.call(document.querySelectorAll('#gq input[type=radio]'), function(r){ r.checked=false; });
+};
+$('reset').onclick = function(){ if (confirm('Delete all guests and answers?')){ localStorage.removeItem(KEY); location.reload(); } };
+</script></body></html>

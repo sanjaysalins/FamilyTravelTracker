@@ -4,6 +4,23 @@
 
 ---
 
+## ▶▶ SESSION 2026-10-11 night — Sybil's 60th quiz (server version BUILT, uncommitted) — PICK UP HERE
+
+Full detail: `F:\slk\PycharmProjects\FamilyTravelTracker\QUIZ-HANDOVER.md`.
+- 3 pages: `/quiz` (public), `/quiz/sybil` + `/quiz/results` (password `bidar2026` or admin). Reset box on results (`DELETE` / `RESET`).
+- Tests: vitest 165 pass; e2e 69/0; build OK. **Nothing committed/pushed/deployed. Not seen in a browser.**
+- Tomorrow: ask owner -> commit -> (ask) push -> live smoke test -> `RESET`. Then the pickups TODO below still stands (event 16 Oct).
+
+---
+
+## ▶ UPDATE 2026-10-11 — Group 1 driver details added (commit `e44c1fd`, pushed)
+
+- **Grp 1 = Theresa (id `p0`), Mon 12 Oct, 10:30 AM, Hotel Novotel Hyderabad (near airport), Etios.** Driver details came from Satish Sir (Bidar): **Yashwant, +91 91080 25315, KA 38 M 1404.**
+- **How:** new `DEFAULT_DRIVERS` map in `src/lib/pickups.ts`; `src/pages/pickups.astro` merges it under the saved `pickup_drivers` store, so anything saved at /driver or by the organiser **overrides** it. The save API is unchanged (it writes only the store).
+- Other groups still show TBC until the driver company fills them. 131 tests pass, build clean.
+
+---
+
 ## ▶▶ SESSION 2026-10-07 — Pickup page + driver-company editing (LIVE) — PICK UP HERE TOMORROW
 
 **Live:** https://bidarplan.netlify.app/pickups (public; old `/pickups.html` 301-redirects). Commits `0ee27e3` → `8950505`. 130 tests, build clean.

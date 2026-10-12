@@ -1,0 +1,10 @@
+[
+{"name":"Aarav","answers":{"q1":"pizza","q2":"Goa","q3":"forty","q4":"Coffee","q5":"Ferrari"},"meant":{"q1":false,"q2":false,"q3":true,"q4":false,"q5":false}},
+{"name":"Mia","answers":{"q1":"","q2":"coorg!!","q3":"40","q4":"Tea","q5":"benz"},"meant":{"q1":false,"q2":true,"q3":true,"q4":true,"q5":true}},
+{"name":"Rohan","answers":{"q1":"butter chicken or biryani?","q2":"Ooty","q3":"41","q4":"Tea","q5":"BMW"},"meant":{"q1":true,"q2":false,"q3":false,"q4":true,"q5":false}},
+{"name":"Tia","answers":{"q1":"cake lol","q2":"","q3":"40ish","q4":"Neither","q5":"mercedes"},"meant":{"q1":false,"q2":false,"q3":true,"q4":false,"q5":true}},
+{"name":"Kabir","answers":{"q1":"Butter Chiken","q2":"Kodaikanal","q3":"39","q4":"Tea","q5":"Audi"},"meant":{"q1":true,"q2":false,"q3":false,"q4":true,"q5":false}},
+{"name":"Zoya","answers":{"q1":"biryani","q2":"Coorg / Kerala","q3":"40th","q4":"Coffee","q5":"Mercedes Benz"},"meant":{"q1":false,"q2":true,"q3":true,"q4":false,"q5":true}},
+{"name":"Dev","answers":{"q1":"Paneer butter masala","q2":"Maldives","q3":"","q4":"","q5":"Merc"},"meant":{"q1":false,"q2":false,"q3":false,"q4":false,"q5":true}},
+{"name":"Anika","answers":{"q1":"BUTTER CHICKEN","q2":"Mercara","q3":"forty","q4":"Tea","q5":"Tesla"},"meant":{"q1":true,"q2":false,"q3":true,"q4":true,"q5":false}}
+]

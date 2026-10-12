@@ -160,6 +160,7 @@ const registrations = () => kv('registrations');
 const vehicles = () => kv('vehicle_bookings');
 const system = () => kv('system');
 const snapshots = () => kv('snapshots');
+const quiz = () => kv('quiz');
 
 /** A point-in-time copy of all family data (registrations + bookings). */
 export interface Snapshot {
@@ -196,6 +197,21 @@ export const store = {
   // system / operational
   getSystem: <T>(key: string) => system().get<T>(key),
   putSystem: (key: string, value: unknown) => system().set(key, value),
+
+  // birthday quiz: one record per guest device (never a shared blob, so phones cannot overwrite each
+  // other), plus single host-written docs under fixed keys (truths, decisions, state).
+  getQuiz: <T>(key: string) => quiz().get<T>(key),
+  putQuiz: (key: string, value: unknown) => quiz().set(key, value),
+  async listQuizEntries<T>(): Promise<T[]> {
+    const keys = (await quiz().list()).filter((k) => k.startsWith('entry-'));
+    const docs = await Promise.all(keys.map((k) => quiz().get<T>(k)));
+    return docs.filter((d): d is T => d !== null);
+  },
+  async clearQuizEntries(): Promise<number> {
+    const keys = (await quiz().list()).filter((k) => k.startsWith('entry-'));
+    await Promise.all(keys.map((k) => quiz().delete(k)));
+    return keys.length;
+  },
 
   // export-all backup (PRD §17)
   async exportAll() {

@@ -1,0 +1,10 @@
+[
+{"name":"Hiroshi","answers":{"q1":"butter chiken","q2":"Kodagu","q3":"forty","q4":"Tea","q5":"Benz"},"meant":{"q1":true,"q2":true,"q3":true,"q4":true,"q5":true}},
+{"name":"Fatima","answers":{"q1":"Chicken tikka masala","q2":"Goa","q3":"39","q4":"Coffee","q5":"Merc"},"meant":{"q1":false,"q2":false,"q3":false,"q4":false,"q5":true}},
+{"name":"Jürgen","answers":{"q1":"Butter-Chicken","q2":"coorg ","q3":"40 years","q4":"Tea","q5":"Mercedes Benz"},"meant":{"q1":true,"q2":true,"q3":true,"q4":true,"q5":true}},
+{"name":"Mei","answers":{"q1":"Paneer butter masala","q2":"Munnar","q3":"41","q4":"Neither","q5":"BMW"},"meant":{"q1":false,"q2":false,"q3":false,"q4":false,"q5":false}},
+{"name":"Carlos","answers":{"q1":"Butter Chiken Masala","q2":"Kodagu, Karnataka","q3":"cuarenta","q4":"Coffee","q5":"Mercedez-Benz"},"meant":{"q1":true,"q2":true,"q3":true,"q4":false,"q5":true}},
+{"name":"Olga","answers":{"q1":"Chicken biryani","q2":"Kurg","q3":"40","q4":"Tea","q5":"Audi"},"meant":{"q1":false,"q2":false,"q3":true,"q4":true,"q5":false}},
+{"name":"Ahmed","answers":{"q1":"murg makhani","q2":"Coorg hills","q3":"fourty","q4":"Tea","q5":"Mercedes-benz S class"},"meant":{"q1":true,"q2":true,"q3":true,"q4":true,"q5":true}},
+{"name":"Priyanka","answers":{"q1":"Dal makhani","q2":"Ooty","q3":"40th","q4":"Tea","q5":"Mercedes Maybach"},"meant":{"q1":false,"q2":false,"q3":true,"q4":true,"q5":false}}
+]

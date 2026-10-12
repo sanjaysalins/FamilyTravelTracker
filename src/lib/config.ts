@@ -21,6 +21,8 @@ export const config = {
 
   adminPasswordHash: required('ADMIN_PASSWORD_HASH'),
   sessionSecret: required('SESSION_SECRET'),
+  // Birthday-quiz host password (bcrypt hash). Optional: quiz-auth.ts falls back to its built-in default.
+  quizPasswordHash: optional('QUIZ_PASSWORD_HASH'),
   sessionIdleTimeoutMin: Number(optional('SESSION_IDLE_TIMEOUT_MIN', '30')),
   loginRateLimitPerMin: Number(optional('LOGIN_RATELIMIT_PER_MIN', '5')),
 
