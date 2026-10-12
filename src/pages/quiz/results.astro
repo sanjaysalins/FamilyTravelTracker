@@ -7,7 +7,7 @@ import { store } from '../../lib/store';
 import { CSRF_COOKIE, issueCsrf } from '../../lib/csrf';
 import { quizHost, touchQuizHost } from '../../lib/quiz-auth';
 import { QUESTIONS, SCORED, buildBoard, type QuizEntry, type QuizState, type Truths } from '../../lib/quiz';
-import type { Decisions } from '../../lib/quiz-match';
+import { answerKey, compare, type Decisions } from '../../lib/quiz-match';
 
 export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'no-store');
@@ -27,6 +27,8 @@ const board = buildBoard(entries, truths, decisions);
 const answered = Object.keys(truths).length > 0;
 const podium = board.rows.filter((r) => r.rank <= 3);
 const live = Astro.url.searchParams.get('live') === '1';
+const openDev = Astro.url.searchParams.get('open');
+const answersOf = new Map(entries.map((e) => [e.device, e.answers]));
 const cleared = Astro.url.searchParams.get('cleared');
 const num = (id: string) => QUESTIONS.findIndex((q) => q.id === id) + 1;
 const mark = (v: string) => (v === 'match' ? '✓' : v === 'maybe' ? '?' : '✗');
@@ -102,6 +104,47 @@ Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'str
             <td class="muted">{r.tieGuess ? <>{r.tieGuess}<br /><small>{away(r.tieDiff)}</small></> : '-'}</td>
             <td class="pts">{r.points}/{SCORED.length}</td>
           </tr>
+          <tr class="ans-row">
+            <td></td>
+            <td colspan="4">
+              <details id={`g-${r.device}`} open={openDev === r.device}>
+                <summary>See {r.name}'s answers</summary>
+                <ul class="ans">
+                  {QUESTIONS.map((q) => {
+                    const raw = answersOf.get(r.device)?.[q.id] ?? '';
+                    const truth = truths[q.id];
+                    const v = r.detail[q.id] ?? 'no';
+                    const key = q.type === 'text' && raw ? answerKey(q, raw) : '';
+                    const askable = answered && q.type === 'text' && !!raw && !!truth && compare(q, raw, truth).verdict !== 'match';
+                    const dec = askable ? decisions[q.id]?.[key] : undefined;
+                    const same = askable ? entries.filter((e) => e.answers[q.id] && answerKey(q, e.answers[q.id]) === key).length : 0;
+                    return (
+                      <li>
+                        <div><b>{num(q.id)}.</b> {q.text}</div>
+                        <div>
+                          {q.tiebreak ? <span class="pill">{raw ? `${raw} · ${away(r.tieDiff)}` : 'no guess'}</span> : <span class={`pill ${v}`}>{mark(v)}</span>}
+                          {' '}<b>{raw || '(blank)'}</b>
+                          {truth && <span class="muted"> · Sybil: {truth.answer}</span>}
+                        </div>
+                        {askable && (
+                          <form method="POST" action="/api/quiz/decide" class="rv">
+                            <input type="hidden" name="csrf_token" value={csrf} />
+                            <input type="hidden" name="q" value={q.id} />
+                            <input type="hidden" name="key" value={key} />
+                            <input type="hidden" name="back" value={r.device} />
+                            <button class={`btn sm ${dec === true ? 'btn-primary' : 'btn-ghost'}`} name="v" value="1" type="submit">Same as Sybil's</button>
+                            <button class={`btn sm ${dec === false ? 'btn-primary' : 'btn-ghost'}`} name="v" value="0" type="submit">Not the same</button>
+                            {dec !== undefined && <button class="btn sm btn-ghost" name="v" value="x" type="submit">Undo</button>}
+                            {same > 1 && <small class="muted"> counts for all {same} guests who wrote this</small>}
+                          </form>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </details>
+            </td>
+          </tr>
         ))}
         {board.rows.length === 0 && <tr><td colspan="5" class="muted">No guests yet.</td></tr>}
       </tbody>
@@ -160,4 +203,9 @@ Astro.cookies.set(CSRF_COOKIE, csrf, { path: '/', httpOnly: true, sameSite: 'str
   .pill.maybe { background:var(--gold-soft); color:var(--warn) }
   .pill.no { background:#f6dcdc; color:var(--danger) }
   .key li { margin:6px 0 }
+  .ans-row td { padding-top:0; border-top:0 }
+  .ans-row summary { cursor:pointer; color:var(--teal-dark); font-weight:600; min-height:44px; display:flex; align-items:center }
+  .ans { list-style:none; padding:0; margin:0 0 8px }
+  .ans li { padding:8px 0; border-top:1px solid var(--line) }
+  .rv { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px }
 </style>

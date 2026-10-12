@@ -1,5 +1,5 @@
 // POST /api/quiz/decide: the host's call on one distinct typed answer: v=1 Same, v=0 Different,
-// v=x clear. One call counts for everyone who wrote that answer. Host only.
+// v=x clear. Optional `back` = a guest's device id: return to that guest's row on the results page. One call counts for everyone who wrote that answer. Host only.
 import type { APIRoute } from 'astro';
 import { store } from '../../../lib/store';
 import { quizHostPost } from '../../../lib/quiz-auth';
@@ -23,5 +23,7 @@ export const POST: APIRoute = async (ctx) => {
   if (v === 'x') delete forQ[key]; else forQ[key] = v === '1';
   if (!Object.keys(forQ).length) delete decisions[qid];
   await store.putQuiz('decisions', decisions);
+  const back = (g.form.get('back') ?? '').toString();
+  if (back && entries.some((e) => e.device === back)) return ctx.redirect(`/quiz/results?open=${encodeURIComponent(back)}#g-${encodeURIComponent(back)}`, 303);
   return ctx.redirect(`/quiz/sybil#${qid}`, 303);
 };
