@@ -1,0 +1,56 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quiz live test report</title>
+<style>
+body{font:20px/1.5 system-ui,Segoe UI,sans-serif;max-width:860px;margin:24px auto;padding:0 16px;color:#222;background:#faf8f3}
+h1{font-size:2rem;margin:0 0 4px}h2{margin:32px 0 8px;font-size:1.5rem}
+.card{background:#fff;border:2px solid #ddd;border-radius:14px;padding:14px 18px;margin:12px 0}
+.ok{border-color:#2e8b57;background:#eef9f2}.new{background:#fff7d6}
+table{border-collapse:collapse;width:100%;font-size:1.1rem}td,th{padding:10px 8px;border-bottom:1px solid #eee;text-align:left}
+.rank{font-weight:800;font-size:1.4rem;color:#0f766e;white-space:nowrap}.pts{font-weight:800;font-size:1.3rem}
+.big{font-size:1.3rem;font-weight:700}small{color:#666}
+ol li{margin:8px 0}
+</style></head><body>
+<h1>Quiz live test: report</h1>
+<p>Run on the live site <b>bidarplan.netlify.app</b>, 2026-10-12. Test data is now deleted.</p>
+
+<div class="card ok"><div class="big">✅ Result: the order is right.</div>
+Highest score is on top. Ties are split by the closer guess on the eye-surgery question.</div>
+
+<h2>How the winner is picked</h2>
+<ol>
+<li><b>Most points wins.</b> 1 point for each of the 16 questions that matches Sybil's answer.</li>
+<li><b>Same points?</b> The closer guess to her eye-surgery number wins. Sybil's number here: <b>12,000</b>.</li>
+<li><b>Still the same?</b> They share the place. Shown as <b>5=</b>. The next place is skipped (5=, 5=, then 7).</li>
+<li><b>Guest with no tiebreak guess</b> goes last among equal points.</li>
+</ol>
+<div class="card">The tick marks: ✓ point · ✗ no point · <b>?</b> "maybe": Sybil taps Same or Different once, and until then it counts 0.</div>
+
+<h2>The filled board (9 test guests)</h2>
+<table>
+<tr><th>#</th><th>Guest</th><th>Score</th><th>Tiebreak guess</th><th>Why this place</th></tr>
+<tr><td class="rank">1</td><td><b>Meena</b></td><td class="pts">16/16</td><td>11,000 <small>(off 1,000)</small></td><td>Top score</td></tr>
+<tr class="new"><td class="rank">2</td><td><b>Latecomer</b> 🆕</td><td class="pts">15/16</td><td>11,900 <small>(off 100)</small></td><td>Entered last. Slotted in at 2.</td></tr>
+<tr><td class="rank">3</td><td><b>Rahul</b></td><td class="pts">14/16</td><td>12,500 <small>(off 500)</small></td><td>Ties Priya on 14, closer guess</td></tr>
+<tr><td class="rank">4</td><td><b>Priya</b></td><td class="pts">14/16</td><td>9,000 <small>(off 3,000)</small></td><td>Ties Rahul on 14, further guess</td></tr>
+<tr><td class="rank">5=</td><td><b>Anita</b></td><td class="pts">12/16</td><td>12,000 <small>(exact!)</small></td><td>Same score and same guess as Joseph</td></tr>
+<tr><td class="rank">5=</td><td><b>Joseph</b></td><td class="pts">12/16</td><td>12,000 <small>(exact!)</small></td><td>A true tie, shared place</td></tr>
+<tr><td class="rank">7</td><td><b>Kiran</b></td><td class="pts">7/16</td><td>15,000 <small>(off 3,000)</small></td><td>Two "maybe" answers (<b>?</b>) still wait for Sybil</td></tr>
+<tr><td class="rank">8</td><td><b>Tom</b></td><td class="pts">5/16</td><td>500</td><td></td></tr>
+<tr><td class="rank">9</td><td><b>Zed</b></td><td class="pts">2/16</td><td>none</td><td>No tiebreak guess</td></tr>
+</table>
+
+<h2>"While people are still entering"</h2>
+<div class="card ok">
+<b>Yes, this works.</b> The board is rebuilt from all entries every time the page loads, and the host page refreshes itself every 15 seconds.<br><br>
+Proof: with 8 guests on the board, <b>Latecomer</b> submitted. The board then showed them at <b>#2</b>, and Rahul, Priya and everyone below moved down one place.<br><br>
+Sybil can also press <b>Close the quiz</b> before she reads out the answers, so nobody can enter after that.
+</div>
+
+<h2>Tips for the party</h2>
+<ul>
+<li>Answers Sybil has not entered give <b>nobody</b> a point. Enter all her answers <b>before</b> showing the board.</li>
+<li>Check the "?" maybe answers (like Kiran's) before announcing the winner. They count 0 until Sybil decides.</li>
+<li>Before the party: type <b>RESET</b> on the results page for a clean start.</li>
+</ul>
+<p><small>Earlier today, the full automatic test (110 simulated phones) also passed 69/69 on the live site.</small></p>
+</body></html>

@@ -1,6 +1,6 @@
 # Sybil's 60th: "Who knows Sybil best?" quiz. HANDOVER
 
-Status 2026-10-11 night: **built, tested locally, NOT committed, NOT pushed, NOT deployed.**
+Status 2026-10-12: **built, committed, pushed, DEPLOYED and live-tested** (69/69 e2e on https://bidarplan.netlify.app). Live data was reset to empty after testing.
 
 ## What it is
 Guests scan a QR code to a public form (16 scored questions + 1 tiebreaker). Sybil answers on a password page.
@@ -45,3 +45,9 @@ Type `RESET` = also wipe Sybil's answers and reopen entries. Use RESET before th
 4. Before the party: final `RESET`, then real answers from Sybil.
 
 Untracked unrelated files (not quiz): `family-travel-backup.json`, `requirements_backup.txt`, `prototype/admin-dropoff.html`, `prototype/dropoffs-preview.html`: decide separately.
+
+## Update 2026-10-12
+- Results page: tap "See [name]'s answers" under a guest to see each answer, Sybil's answer and Same / Not the same buttons (commit 351203f; decide API takes optional `back` = guest device id).
+- Live test report: `prototype/quiz-live-test-report.html`. QR print page: `prototype/quiz/QR-PRINT.html` (+ `qr.png`) -> https://bidarplan.netlify.app/quiz.
+- Ranking: most points, then closer tiebreak (q13), else shared rank (5=).
+- STILL TO DO: check guessed options (e.g. Bangalore); optional QUIZ_PASSWORD_HASH in Netlify; final RESET on the day, then Sybil's real answers (enter ALL before showing the board; settle "?" answers before naming a winner).
